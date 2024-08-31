@@ -101,9 +101,9 @@ def show_filtered_data(filtered_data, role):
 
     # Create pie charts based on role
     if role == "Student":
-        create_pie_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
+        create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
     elif role == "Teacher":
-        create_pie_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
+        create_bar_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
 
 # Function to create and display a pie chart
 def create_pie_chart(data, label_column, value_column, title):
