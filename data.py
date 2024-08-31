@@ -108,6 +108,14 @@ def show_filtered_data(filtered_data, role):
 
     # Display the filtered data
     st.write(filtered_data)
+
+    # Create bar charts based on role
+    if role == "Student":
+        create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
+    elif role == "Teacher":
+        create_bar_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
+
+# Function to create and display a bar chart
 def create_bar_chart(data, label_column, value_column, title):
     fig, ax = plt.subplots()
     bar_data = data.groupby(label_column)[value_column].sum()
@@ -115,27 +123,6 @@ def create_bar_chart(data, label_column, value_column, title):
     ax.set_xlabel(label_column)
     ax.set_ylabel(value_column)
     plt.xticks(rotation=45)
-    plt.title(title)
-    st.pyplot(fig)
-    # Create bar charts based on role
-    if role == "Student":
-        create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
-    elif role == "Teacher":
-        create_bar_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
-
-
-    # Create pie charts based on role
-    if role == "Student":
-        create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
-    elif role == "Teacher":
-        create_bar_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
-
-# Function to create and display a pie chart
-def create_pie_chart(data, label_column, value_column, title):
-    fig, ax = plt.subplots()
-    pie_data = data.groupby(label_column)[value_column].sum()
-    ax.pie(pie_data, labels=pie_data.index, autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     plt.title(title)
     st.pyplot(fig)
 
