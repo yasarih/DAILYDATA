@@ -149,7 +149,7 @@ def main():
     # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
-    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken", "Type of class"]
+    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken", "Class Conducted Status\\"]
 
     # Cache and fetch the entire dataset once
     data = fetch_all_data(spreadsheet_name, worksheet_name, expected_headers)
