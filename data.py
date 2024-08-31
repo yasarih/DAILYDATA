@@ -108,7 +108,15 @@ def show_filtered_data(filtered_data, role):
 
     # Display the filtered data
     st.write(filtered_data)
-
+def create_bar_chart(data, label_column, value_column, title):
+    fig, ax = plt.subplots()
+    bar_data = data.groupby(label_column)[value_column].sum()
+    ax.bar(bar_data.index, bar_data.values)
+    ax.set_xlabel(label_column)
+    ax.set_ylabel(value_column)
+    plt.xticks(rotation=45)
+    plt.title(title)
+    st.pyplot(fig)
     # Create bar charts based on role
     if role == "Student":
         create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
