@@ -101,7 +101,7 @@ def show_filtered_data(filtered_data, role):
 
     if role == "Student":
         # Select specific columns to show for students
-        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Class Conducted Status\\"]]
+        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
         
         # Format 'Hr' to two decimal places
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
@@ -119,9 +119,7 @@ def show_filtered_data(filtered_data, role):
 
     elif role == "Teacher":
         # Select specific columns to show for teachers
-        filtered_data = filtered_data[["Date", "Student id", "Student", "Hr", "Class
-
-Conducted Status\\"]]
+        filtered_data = filtered_data[["Date", "Student id", "Student", "Hr", "Type of class"]]
         
         # Format 'Hr' to two decimal places
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
@@ -151,7 +149,7 @@ def main():
     # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
-    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken", "Class Conducted Status\\"]
+    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken", "Type of class"]
 
     # Cache and fetch the entire dataset once
     data = fetch_all_data(spreadsheet_name, worksheet_name, expected_headers)
