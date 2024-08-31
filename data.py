@@ -95,9 +95,26 @@ def show_filtered_data(filtered_data, role):
     # Apply month filter
     filtered_data = filtered_data[filtered_data["MM"] == selected_month]
 
-    
+    # Universal filter: text input to filter across all columns
+    search_term = st.sidebar.text_input("Search All Columns", "")
+    if search_term:
+        filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
+    # Drop specific columns based on the role
+    if role == "Student":
+        filtered_data = filtered_data.drop(columns=["Year", "MM", "Student id", "Class", "Board"], errors='ignore')
+    elif role == "Teacher":
+        filtered_data = filtered_data.drop(columns=["Year", "MM", "Teachers ID"], errors='ignore')
+
+    # Display the filtered data
     st.write(filtered_data)
+
+    # Create bar charts based on role
+    if role == "Student":
+        create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
+    elif role == "Teacher":
+        create_bar_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
+
 
     # Create pie charts based on role
     if role == "Student":
