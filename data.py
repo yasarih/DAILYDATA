@@ -102,7 +102,7 @@ def show_filtered_data(filtered_data, role):
 
     # Drop specific columns based on the role
     if role == "Student":
-        filtered_data = filtered_data.drop(columns=["Year", "MM", "Student id", "Class", "Board"], errors='ignore')
+        filtered_data = filtered_data.drop(columns=["Year", "MM",  "Class", "Board"], errors='ignore')
     elif role == "Teacher":
         filtered_data = filtered_data.drop(columns=["Year", "MM", "Teachers ID"], errors='ignore')
 
