@@ -116,7 +116,7 @@ def create_pie_chart(data, label_column, value_column, title):
 
 # Main function to handle user role selection and page display
 def main():
-    st.title("Welcome to the Web App")
+    st.title("Angle Belearn: Your Daily Class Insights")
 
     # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
