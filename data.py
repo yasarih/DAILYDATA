@@ -107,7 +107,8 @@ def show_filtered_data(filtered_data, role):
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
         # Display the filtered data
-        st.write(filtered_data)
+        # Display the filtered data without the index
+        st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
 
         # Calculate and display total hours and total hours per subject
         total_hours = filtered_data["Hr"].sum()
@@ -132,7 +133,8 @@ def show_filtered_data(filtered_data, role):
         styled_data = filtered_data.style.apply(lambda x: ['background-color: red' if x.is_duplicate else '' for _ in x], axis=1)
         
         # Display the styled DataFrame
-        st.dataframe(styled_data)
+        # Display the filtered data without the index
+        st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
         
         # Calculate and display total hours and hours per student
         total_hours = filtered_data["Hr"].sum()
