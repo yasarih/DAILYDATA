@@ -106,8 +106,14 @@ def show_filtered_data(filtered_data, role):
     elif role == "Teacher":
         filtered_data = filtered_data.drop(columns=["Year", "MM", "Teachers ID"], errors='ignore')
 
-    # Display the filtered data
-    st.write(filtered_data)
+     # Identify duplicates for 'Date' and 'Student id'
+    filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
+    
+    # Highlight duplicates using style
+    styled_data = filtered_data.style.apply(lambda x: ['background-color: red' if x.is_duplicate else '' for _ in x], axis=1)
+
+    # Display the styled DataFrame
+    st.dataframe(styled_data)
 
     # Create bar charts based on role
     if role == "Student":
