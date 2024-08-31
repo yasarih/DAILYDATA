@@ -101,7 +101,7 @@ def show_filtered_data(filtered_data, role):
 
     if role == "Student":
         # Select specific columns to show for students
-        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Class Conducted Status\\"]]
         
         # Format 'Hr' to two decimal places
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
