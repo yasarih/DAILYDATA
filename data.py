@@ -2,7 +2,6 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-import matplotlib.pyplot as plt
 import json
 
 # Function to load credentials from Streamlit secrets for the new project
@@ -100,37 +99,48 @@ def show_filtered_data(filtered_data, role):
     if search_term:
         filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
-    # Drop specific columns based on the role
     if role == "Student":
-        filtered_data = filtered_data.drop(columns=["Year", "MM",  "Class", "Board"], errors='ignore')
+        # Select specific columns to show for students
+        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
+        
+        # Format 'Hr' to two decimal places
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        
+        # Display the filtered data
+        st.write(filtered_data)
+
+        # Calculate and display total hours and total hours per subject
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours**: {total_hours:.2f}")
+        
+        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+        st.write("**Total Hours per Subject:**")
+        st.write(subject_hours)
+
     elif role == "Teacher":
-        filtered_data = filtered_data.drop(columns=["Year", "MM", "Teachers ID"], errors='ignore')
-
-     # Identify duplicates for 'Date' and 'Student id'
-    filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
-    
-    # Highlight duplicates using style
-    styled_data = filtered_data.style.apply(lambda x: ['background-color: red' if x.is_duplicate else '' for _ in x], axis=1)
-
-    # Display the styled DataFrame
-    st.dataframe(styled_data)
-
-    # Create bar charts based on role
-    if role == "Student":
-        create_bar_chart(filtered_data, 'Subject', 'Hr', 'Hours spent on each subject')
-    elif role == "Teacher":
-        create_bar_chart(filtered_data, 'Student', 'Hr', 'Hours spent teaching each student')
-
-# Function to create and display a bar chart
-def create_bar_chart(data, label_column, value_column, title):
-    fig, ax = plt.subplots()
-    bar_data = data.groupby(label_column)[value_column].sum()
-    ax.bar(bar_data.index, bar_data.values)
-    ax.set_xlabel(label_column)
-    ax.set_ylabel(value_column)
-    plt.xticks(rotation=45)
-    plt.title(title)
-    st.pyplot(fig)
+        # Select specific columns to show for teachers
+        filtered_data = filtered_data[["Date", "Student id", "Student", "Hr", "Type of class"]]
+        
+        # Format 'Hr' to two decimal places
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        
+        # **Duplicate Checking for Teachers Only**
+        # Identify duplicates for 'Date' and 'Student id'
+        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
+        
+        # Highlight duplicates using style
+        styled_data = filtered_data.style.apply(lambda x: ['background-color: red' if x.is_duplicate else '' for _ in x], axis=1)
+        
+        # Display the styled DataFrame
+        st.dataframe(styled_data)
+        
+        # Calculate and display total hours and hours per student
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours**: {total_hours:.2f}")
+        
+        student_hours = filtered_data.groupby("Student")["Hr"].sum()
+        st.write("**Total Hours per Student:**")
+        st.write(student_hours)
 
 # Main function to handle user role selection and page display
 def main():
@@ -139,7 +149,7 @@ def main():
     # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
-    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken"]
+    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken", "Type of class"]
 
     # Cache and fetch the entire dataset once
     data = fetch_all_data(spreadsheet_name, worksheet_name, expected_headers)
