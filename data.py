@@ -134,7 +134,10 @@ def show_filtered_data(filtered_data, role):
         filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
         
         # Highlight duplicates using style
-        styled_data = filtered_data.style.apply(lambda x: ['background-color: red' if x.is_duplicate else '' for _ in x], axis=1)
+        def highlight_duplicates(row):
+            return ['background-color: red' if row.is_duplicate else '' for _ in row]
+
+        styled_data = filtered_data.style.apply(highlight_duplicates, axis=1)
         
         # Display the styled DataFrame without the index
         st.write(styled_data.to_html(index=False), unsafe_allow_html=True)
