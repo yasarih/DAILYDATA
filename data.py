@@ -42,8 +42,15 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
     # Use get_all_values to read all data including blank rows
     data = sheet.get_all_values()
     
-    # Convert the data into a DataFrame
-    df = pd.DataFrame(data[1:], columns=data[0])  # Skip the first row for headers
+    # Check if data is non-empty and has headers
+    if data and len(data) > 1:
+        # Convert the data into a DataFrame
+        df = pd.DataFrame(data[1:], columns=data[0])  # Skip the first row for headers
+    else:
+        # Handle empty or incorrectly formatted data
+        st.warning("No data found or the sheet is incorrectly formatted.")
+        df = pd.DataFrame()  # Return an empty DataFrame
+
     return df
 
 # Function to manage data display and filtering for a specific worksheet
@@ -102,85 +109,4 @@ def show_filtered_data(filtered_data, role):
     # Universal filter: text input to filter across all columns
     search_term = st.sidebar.text_input("Search All Columns", "")
     if search_term:
-        filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
-
-    if role == "Student":
-        # Select specific columns to show for students
-        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
-        
-        # Format 'Hr' to two decimal places
-        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
-        
-        # Display the filtered data without the index
-        st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
-
-        # Calculate and display total hours and total hours per subject
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours**: {total_hours:.2f}")
-        
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Total Hours per Subject:**")
-        st.write(subject_hours)
-
-    elif role == "Teacher":
-        # Select specific columns to show for teachers
-        filtered_data = filtered_data[["Date", "Student id", "Student", "Hr", "Type of class"]]
-        
-        # Format 'Hr' to two decimal places
-        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
-        
-        # **Duplicate Checking for Teachers Only**
-        # Identify duplicates for 'Date' and 'Student id'
-        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
-        
-        # Highlight duplicates using style
-        def highlight_duplicates(row):
-            return ['background-color: red' if row.is_duplicate else '' for _ in row]
-
-        styled_data = filtered_data.style.apply(highlight_duplicates, axis=1)
-        
-        # Display the styled DataFrame without the index
-        st.write(styled_data.to_html(index=False), unsafe_allow_html=True)
-        
-        # Calculate and display total hours and hours per student
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours**: {total_hours:.2f}")
-        
-        student_hours = filtered_data.groupby("Student")["Hr"].sum()
-        st.write("**Total Hours per Student:**")
-        st.write(student_hours)
-
-# Main function to handle user role selection and page display
-def main():
-    st.title("Angle Belearn: Your Daily Class Insights")
-
-    # Sheet and headers details
-    spreadsheet_name = 'Student Daily Class Details 2024'
-    worksheet_name = 'Student class details'
-
-    # Cache and fetch the entire dataset once
-    data = fetch_all_data(spreadsheet_name, worksheet_name)
-
-    # Create a sidebar with role options
-    role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
-
-    # Load the corresponding page based on user selection
-    if role == "Student":
-        student_page(data)
-    elif role == "Teacher":
-        teacher_page(data)
-    else:
-        st.write("Please select a role from the sidebar.")
-
-# Function to display the Student page
-def student_page(data):
-    st.title("Student Page")
-    manage_data(data, 'Student Daily Data', role="Student")
-
-# Function to display the Teacher page
-def teacher_page(data):
-    st.title("Teacher Page")
-    manage_data(data, 'Teacher Daily Data', role="Teacher")
-
-if __name__ == "__main__":
-    main()
+        filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term,
