@@ -36,10 +36,15 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
 
 # Cache data fetching to prevent redundant calls
 @st.cache_data
-def fetch_all_data(spreadsheet_name, worksheet_name, expected_headers):
+def fetch_all_data(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
-    data = sheet.get_all_records(expected_headers=expected_headers)
-    return pd.DataFrame(data)
+    
+    # Use get_all_values to read all data including blank rows
+    data = sheet.get_all_values()
+    
+    # Convert the data into a DataFrame
+    df = pd.DataFrame(data[1:], columns=data[0])  # Skip the first row for headers
+    return df
 
 # Function to manage data display and filtering for a specific worksheet
 def manage_data(data, sheet_name, role):
@@ -104,9 +109,8 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
         
         # Format 'Hr' to two decimal places
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
         
-        # Display the filtered data
         # Display the filtered data without the index
         st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
 
@@ -123,7 +127,7 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Student id", "Student", "Hr", "Type of class"]]
         
         # Format 'Hr' to two decimal places
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
         
         # **Duplicate Checking for Teachers Only**
         # Identify duplicates for 'Date' and 'Student id'
@@ -132,9 +136,8 @@ def show_filtered_data(filtered_data, role):
         # Highlight duplicates using style
         styled_data = filtered_data.style.apply(lambda x: ['background-color: red' if x.is_duplicate else '' for _ in x], axis=1)
         
-        # Display the styled DataFrame
-        # Display the filtered data without the index
-        st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
+        # Display the styled DataFrame without the index
+        st.write(styled_data.to_html(index=False), unsafe_allow_html=True)
         
         # Calculate and display total hours and hours per student
         total_hours = filtered_data["Hr"].sum()
@@ -151,10 +154,9 @@ def main():
     # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
-    expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken", "Type of class"]
 
     # Cache and fetch the entire dataset once
-    data = fetch_all_data(spreadsheet_name, worksheet_name, expected_headers)
+    data = fetch_all_data(spreadsheet_name, worksheet_name)
 
     # Create a sidebar with role options
     role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
