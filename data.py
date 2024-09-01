@@ -55,59 +55,60 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
 # Function to manage data display and filtering for a specific worksheet
 def manage_data(data, sheet_name, role):
-    st.subheader(f"{sheet_name} Data")
+    st.subheader(f"📊 {sheet_name} Data")
 
     # Role-specific filtering
     if role == "Student":
-        st.sidebar.subheader("Filter Options for Student")
-        
-        # Filter by Student ID
-        student_ids = sorted(data["Student id"].unique())
-        selected_student_id = st.sidebar.selectbox("Enter Student ID", student_ids)
+        with st.sidebar:
+            st.header("Filter Options for Student")
+            # Filter by Student ID
+            student_ids = sorted(data["Student id"].unique())
+            selected_student_id = st.selectbox("Enter Student ID", student_ids)
 
-        # Filter data by selected student ID
-        filtered_data = data[data["Student id"] == selected_student_id]
-        
-        # Ask for the first four letters of the student's name
-        input_name = st.sidebar.text_input("Enter the first four letters of your name")
-        # Verify the input name
-        actual_name = filtered_data["Student"].values[0]  # Assumes there's only one matching row
-        if input_name.lower() == actual_name[:4].lower():
-            # Proceed if names match
-            show_filtered_data(filtered_data, role)
-        else:
-            st.error("Name does not match. Please check your input.")
+            # Filter data by selected student ID
+            filtered_data = data[data["Student id"] == selected_student_id]
+            
+            # Ask for the first four letters of the student's name
+            input_name = st.text_input("Enter the first four letters of your name")
+            # Verify the input name
+            actual_name = filtered_data["Student"].values[0]  # Assumes there's only one matching row
+            if input_name.lower() == actual_name[:4].lower():
+                # Proceed if names match
+                show_filtered_data(filtered_data, role)
+            else:
+                st.error("Name does not match. Please check your input.")
 
     elif role == "Teacher":
-        st.sidebar.subheader("Filter Options for Teacher")
-        
-        # Filter by Teacher ID
-        teacher_ids = sorted(data["Teachers ID"].unique())
-        selected_teacher_id = st.sidebar.selectbox("Enter Teacher ID", teacher_ids)
+        with st.sidebar:
+            st.header("Filter Options for Teacher")
+            # Filter by Teacher ID
+            teacher_ids = sorted(data["Teachers ID"].unique())
+            selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids)
 
-        # Filter data by selected teacher ID
-        filtered_data = data[data["Teachers ID"] == selected_teacher_id]
-        
-        # Ask for the first four letters of the teacher's name
-        input_name = st.sidebar.text_input("Enter the first four letters of your name")
-        # Verify the input name
-        actual_name = filtered_data["Teachers Name"].values[0]  # Assumes there's only one matching row
-        if input_name.lower() == actual_name[:4].lower():
-            # Proceed if names match
-            show_filtered_data(filtered_data, role)
-        else:
-            st.error("Name does not match. Please check your input.")
+            # Filter data by selected teacher ID
+            filtered_data = data[data["Teachers ID"] == selected_teacher_id]
+            
+            # Ask for the first four letters of the teacher's name
+            input_name = st.text_input("Enter the first four letters of your name")
+            # Verify the input name
+            actual_name = filtered_data["Teachers Name"].values[0]  # Assumes there's only one matching row
+            if input_name.lower() == actual_name[:4].lower():
+                # Proceed if names match
+                show_filtered_data(filtered_data, role)
+            else:
+                st.error("Name does not match. Please check your input.")
 
 def show_filtered_data(filtered_data, role):
     # Filter by Month Number
-    months = sorted(filtered_data["MM"].unique())
-    selected_month = st.sidebar.selectbox("Select Month", months)
+    with st.expander("Filter by Month"):
+        months = sorted(filtered_data["MM"].unique())
+        selected_month = st.selectbox("Select Month", months)
 
     # Apply month filter
     filtered_data = filtered_data[filtered_data["MM"] == selected_month]
 
     # Universal filter: text input to filter across all columns
-    search_term = st.sidebar.text_input("Search All Columns", "")
+    search_term = st.text_input("Search All Columns", "")
     if search_term:
         filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
@@ -159,7 +160,7 @@ def show_filtered_data(filtered_data, role):
 
 # Main function to handle user role selection and page display
 def main():
-    st.title("Angle Belearn: Your Daily Class Insights")
+    st.title("📘 Angle Belearn: Your Daily Class Insights")
 
     # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
@@ -174,7 +175,10 @@ def main():
         return
 
     # Create a sidebar with role options
-    role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
+    with st.sidebar:
+        st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
+        st.title("User Role Selection")
+        role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
     # Load the corresponding page based on user selection
     if role == "Student":
@@ -186,12 +190,12 @@ def main():
 
 # Function to display the Student page
 def student_page(data):
-    st.title("Student Page")
+    st.title("🎓 Student Page")
     manage_data(data, 'Student Daily Data', role="Student")
 
 # Function to display the Teacher page
 def teacher_page(data):
-    st.title("Teacher Page")
+    st.title("👩‍🏫 Teacher Page")
     manage_data(data, 'Teacher Daily Data', role="Teacher")
 
 if __name__ == "__main__":
