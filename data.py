@@ -154,23 +154,6 @@ def manage_data(data, sheet_name, role):
                 st.error("Name does not match. Please check your input.")
 
 def show_filtered_data(filtered_data, role):
-    # Filter by Month Number
-    st.subheader("Filter by Month")
-    months = sorted(filtered_data["MM"].unique())
-    selected_month = st.selectbox("Select Month", months)
-
-    # Apply month filter
-    filtered_data = filtered_data[filtered_data["MM"] == selected_month]
-
-    # Date Range Selection
-    st.subheader("Select Date Range")
-    min_date = pd.to_datetime(filtered_data['Date']).min()
-    max_date = pd.to_datetime(filtered_data['Date']).max()
-    start_date, end_date = st.date_input("Date Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-    
-    # Apply date range filter
-    filtered_data = filtered_data[(pd.to_datetime(filtered_data['Date']) >= start_date) & (pd.to_datetime(filtered_data['Date']) <= end_date)]
-
     # Universal filter: text input to filter across all columns
     search_term = st.text_input("Search All Columns", "")
     if search_term:
