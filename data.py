@@ -128,7 +128,7 @@ def manage_data(data, sheet_name, role):
 
         # Button for login verification
         if st.button("Verify"):
-            # Filter data by selected student ID
+            # Filter data by selected student ID and month
             filtered_data = data[(data["Student id"] == selected_student_id) & (data["MM"] == selected_month)]
 
             # Verify the input name
@@ -139,8 +139,6 @@ def manage_data(data, sheet_name, role):
                     st.session_state.logged_in = True
                     st.session_state.role = role
                     st.session_state.filtered_data = filtered_data
-                    # Show filtered data immediately after verification
-                    show_filtered_data(filtered_data, role)
                 else:
                     st.error("Name does not match. Please check your input.")
             else:
@@ -161,7 +159,7 @@ def manage_data(data, sheet_name, role):
 
         # Button for login verification
         if st.button("Verify"):
-            # Filter data by selected teacher ID
+            # Filter data by selected teacher ID and month
             filtered_data = data[(data["Teachers ID"] == selected_teacher_id) & (data["MM"] == selected_month)]
 
             # Verify the input name
@@ -172,23 +170,16 @@ def manage_data(data, sheet_name, role):
                     st.session_state.logged_in = True
                     st.session_state.role = role
                     st.session_state.filtered_data = filtered_data
-                    # Show filtered data immediately after verification
-                    show_filtered_data(filtered_data, role)
                 else:
                     st.error("Name does not match. Please check your input.")
             else:
                 st.error("No data found for the selected Teacher ID and Month.")
 
+    # Display filtered data if logged in
+    if 'logged_in' in st.session_state and st.session_state.logged_in and st.session_state.role == role:
+        show_filtered_data(st.session_state.filtered_data, role)
+
 def show_filtered_data(filtered_data, role):
-    # Apply month filter based on session state
-    if 'selected_month' in st.session_state:
-        filtered_data = filtered_data[filtered_data["MM"] == st.session_state.selected_month]
-
-    # Universal filter: text input to filter across all columns
-    search_term = st.text_input("Search All Columns", "", key='search_all_columns')
-    if search_term:
-        filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
-
     # Add Serial Numbers
     filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
 
@@ -270,19 +261,13 @@ def main():
 
 # Function to display the Student page
 def student_page(data):
-    if 'logged_in' in st.session_state and st.session_state.logged_in and st.session_state.role == "Student":
-        show_filtered_data(st.session_state.filtered_data, role="Student")
-    else:
-        st.title("🎓 Student Page")
-        manage_data(data, 'Student Daily Data', role="Student")
+    st.title("🎓 Student Page")
+    manage_data(data, 'Student Daily Data', role="Student")
 
 # Function to display the Teacher page
 def teacher_page(data):
-    if 'logged_in' in st.session_state and st.session_state.logged_in and st.session_state.role == "Teacher":
-        show_filtered_data(st.session_state.filtered_data, role="Teacher")
-    else:
-        st.title("👩‍🏫 Teacher Page")
-        manage_data(data, 'Teacher Daily Data', role="Teacher")
+    st.title("👩‍🏫 Teacher Page")
+    manage_data(data, 'Teacher Daily Data', role="Teacher")
 
 if __name__ == "__main__":
     main()
