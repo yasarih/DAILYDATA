@@ -35,8 +35,7 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
-# Cache data fetching to prevent redundant calls
-@st.cache_data
+# Function to fetch all data without caching to always get updated values
 def fetch_all_data(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
     data = sheet.get_all_values()
@@ -126,7 +125,6 @@ def show_filtered_data(filtered_data, role):
         student_hours = filtered_data.groupby("Student")["Hr"].sum()
         st.write("**Student-wise Hours:**")
         st.write(student_hours)
-        return
 
     # Display the filtered data for students
     st.write(filtered_data)
@@ -142,9 +140,14 @@ def main():
     # Create a sidebar with role options
     role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
+    if st.sidebar.button("Refresh Data"):
+        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
+    
+    if "data" not in st.session_state:
+        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
+
     if role == "Student" or role == "Teacher":
-        data = fetch_all_data(spreadsheet_name, worksheet_name)
-        manage_data(data, role)
+        manage_data(st.session_state.data, role)
     else:
         st.write("Please select a role from the sidebar.")
 
