@@ -69,17 +69,18 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
+    # Filter by month before verification
+    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+
     if role == "Student":
         # Filter by Student ID and verify
         student_id = st.sidebar.text_input("Enter Student ID").strip().lower()
         student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
         if st.sidebar.button("Verify Student"):
-            filtered_data = data[(data["Student id"].str.lower() == student_id) & 
+            filtered_data = data[(data["MM"] == month) & 
+                                 (data["Student id"].str.lower() == student_id) & 
                                  (data["Student"].str[:4].str.lower() == student_name_prefix)]
             if not filtered_data.empty:
-                # Filter by month
-                month = st.selectbox("Select Month", sorted(filtered_data["MM"].unique()))
-                filtered_data = filtered_data[filtered_data["MM"] == month]
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
@@ -89,12 +90,10 @@ def manage_data(data, role):
         teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
         teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
         if st.sidebar.button("Verify Teacher"):
-            filtered_data = data[(data["Teachers ID"].str.lower() == teacher_id) & 
+            filtered_data = data[(data["MM"] == month) & 
+                                 (data["Teachers ID"].str.lower() == teacher_id) & 
                                  (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix)]
             if not filtered_data.empty:
-                # Filter by month
-                month = st.selectbox("Select Month", sorted(filtered_data["MM"].unique()))
-                filtered_data = filtered_data[filtered_data["MM"] == month]
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
