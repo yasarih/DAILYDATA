@@ -77,7 +77,7 @@ def manage_data(data, role):
             filtered_data = data[(data["Student id"] == student_id) & 
                                  (data["Student"].str[:4].str.lower() == student_name_prefix.lower())]
             if not filtered_data.empty:
-                st.write(filtered_data)
+                show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
     
@@ -89,9 +89,13 @@ def manage_data(data, role):
             filtered_data = data[(data["Teachers ID"] == teacher_id) & 
                                  (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix.lower())]
             if not filtered_data.empty:
-                st.write(filtered_data)
+                show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
+
+def show_filtered_data(filtered_data, role):
+    # Display the filtered data
+    st.write(filtered_data)
 
 # Main function to handle user role selection and page display
 def main():
