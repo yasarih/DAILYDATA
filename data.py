@@ -139,6 +139,8 @@ def manage_data(data, sheet_name, role):
                     st.session_state.logged_in = True
                     st.session_state.role = role
                     st.session_state.filtered_data = filtered_data
+                    # Show filtered data immediately after verification
+                    show_filtered_data(filtered_data, role)
                 else:
                     st.error("Name does not match. Please check your input.")
             else:
@@ -170,6 +172,8 @@ def manage_data(data, sheet_name, role):
                     st.session_state.logged_in = True
                     st.session_state.role = role
                     st.session_state.filtered_data = filtered_data
+                    # Show filtered data immediately after verification
+                    show_filtered_data(filtered_data, role)
                 else:
                     st.error("Name does not match. Please check your input.")
             else:
@@ -252,7 +256,7 @@ def main():
         return
 
     # All elements on the main page
-    st.image("https://anglebelearn.com/wp-content/uploads/2023/06/Angle-Belearn-Logo.svg", use_column_width=True)  # Add your logo URL
+    st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
     st.header("User Role Selection")
     role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
