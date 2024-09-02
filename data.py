@@ -77,6 +77,9 @@ def manage_data(data, role):
             filtered_data = data[(data["Student id"] == student_id) & 
                                  (data["Student"].str[:4].str.lower() == student_name_prefix.lower())]
             if not filtered_data.empty:
+                # Filter by month
+                month = st.selectbox("Select Month", sorted(filtered_data["MM"].unique()))
+                filtered_data = filtered_data[filtered_data["MM"] == month]
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
@@ -89,12 +92,30 @@ def manage_data(data, role):
             filtered_data = data[(data["Teachers ID"] == teacher_id) & 
                                  (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix.lower())]
             if not filtered_data.empty:
+                # Filter by month
+                month = st.selectbox("Select Month", sorted(filtered_data["MM"].unique()))
+                filtered_data = filtered_data[filtered_data["MM"] == month]
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
 
 def show_filtered_data(filtered_data, role):
-    # Display the filtered data
+    # Customize columns display based on role
+    if role == "Student":
+        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+
+    elif role == "Teacher":
+        filtered_data = filtered_data[["Date", "Student id", "Student", "Chapter taken", "Hr", "Type of class"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+
+        # Highlight duplicate entries for teachers
+        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
+        styled_data = filtered_data.style.apply(lambda x: ['background-color: yellow' if x.is_duplicate else '' for _ in x], axis=1)
+        st.dataframe(styled_data)
+        return
+
+    # Display the filtered data for students
     st.write(filtered_data)
 
 # Main function to handle user role selection and page display
