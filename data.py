@@ -109,6 +109,7 @@ def show_filtered_data(filtered_data, role):
         subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
         st.write("**Subject-wise Hours:**")
         st.write(subject_hours)
+        st.write(filtered_data)
 
     elif role == "Teacher":
         filtered_data = filtered_data[["Date", "Student id", "Student", "Chapter taken", "Hr", "Type of class"]]
@@ -127,7 +128,7 @@ def show_filtered_data(filtered_data, role):
         st.write(student_hours)
 
     # Display the filtered data for students
-    st.write(filtered_data)
+    
 
 # Main function to handle user role selection and page display
 def main():
