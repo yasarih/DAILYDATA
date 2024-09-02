@@ -164,66 +164,67 @@ def manage_data(data, sheet_name, role):
 def show_filtered_data(filtered_data, role):
     # Add month selection after login
     if 'selected_month' not in st.session_state or st.session_state.selected_month is None:
-        st.subheader("Select Month")
+        st.sidebar.subheader("Select Month")
         months = sorted(filtered_data["MM"].unique())
-        st.session_state.selected_month = st.selectbox("Select Month", months)
+        st.session_state.selected_month = st.sidebar.selectbox("Select Month", months)
 
-    # Apply month filter
-    filtered_data = filtered_data[filtered_data["MM"] == st.session_state.selected_month]
+    # Apply month filter only after month is selected
+    if st.session_state.selected_month:
+        filtered_data = filtered_data[filtered_data["MM"] == st.session_state.selected_month]
 
-    # Universal filter: text input to filter across all columns
-    search_term = st.text_input("Search All Columns", "", key='search_all_columns')
-    if search_term:
-        filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
+        # Universal filter: text input to filter across all columns
+        search_term = st.text_input("Search All Columns", "", key='search_all_columns')
+        if search_term:
+            filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
-    # Add Serial Numbers
-    filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
+        # Add Serial Numbers
+        filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
 
-    if role == "Student":
-        # Select specific columns to show for students
-        filtered_data = filtered_data[["Sl. No.", "Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
-        
-        # Convert 'Hr' to numeric and format to two decimal places
-        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
-        
-        # Display the filtered data without the index
-        st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
+        if role == "Student":
+            # Select specific columns to show for students
+            filtered_data = filtered_data[["Sl. No.", "Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
+            
+            # Convert 'Hr' to numeric and format to two decimal places
+            filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
+            
+            # Display the filtered data without the index
+            st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
 
-        # Calculate and display total hours and total hours per subject
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours**: {total_hours:.2f}")
-        
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Total Hours per Subject:**")
-        st.write(subject_hours)
+            # Calculate and display total hours and total hours per subject
+            total_hours = filtered_data["Hr"].sum()
+            st.write(f"**Total Hours**: {total_hours:.2f}")
+            
+            subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+            st.write("**Total Hours per Subject:**")
+            st.write(subject_hours)
 
-    elif role == "Teacher":
-        # Select specific columns to show for teachers
-        filtered_data = filtered_data[["Sl. No.", "Date", "Student id", "Student", "Hr", "Type of class"]]
-        
-        # Convert 'Hr' to numeric and format to two decimal places
-        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
-        
-        # **Duplicate Checking for Teachers Only**
-        # Identify duplicates for 'Date' and 'Student id'
-        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
-        
-        # Highlight duplicates using style
-        def highlight_duplicates(row):
-            return ['background-color: red' if row.is_duplicate else '' for _ in row]
+        elif role == "Teacher":
+            # Select specific columns to show for teachers
+            filtered_data = filtered_data[["Sl. No.", "Date", "Student id", "Student", "Hr", "Type of class"]]
+            
+            # Convert 'Hr' to numeric and format to two decimal places
+            filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
+            
+            # **Duplicate Checking for Teachers Only**
+            # Identify duplicates for 'Date' and 'Student id'
+            filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
+            
+            # Highlight duplicates using style
+            def highlight_duplicates(row):
+                return ['background-color: red' if row.is_duplicate else '' for _ in row]
 
-        styled_data = filtered_data.style.apply(highlight_duplicates, axis=1)
-        
-        # Display the styled DataFrame without the index
-        st.write(styled_data.to_html(index=False), unsafe_allow_html=True)
-        
-        # Calculate and display total hours and hours per student
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours**: {total_hours:.2f}")
-        
-        student_hours = filtered_data.groupby("Student")["Hr"].sum()
-        st.write("**Total Hours per Student:**")
-        st.write(student_hours)
+            styled_data = filtered_data.style.apply(highlight_duplicates, axis=1)
+            
+            # Display the styled DataFrame without the index
+            st.write(styled_data.to_html(index=False), unsafe_allow_html=True)
+            
+            # Calculate and display total hours and hours per student
+            total_hours = filtered_data["Hr"].sum()
+            st.write(f"**Total Hours**: {total_hours:.2f}")
+            
+            student_hours = filtered_data.groupby("Student")["Hr"].sum()
+            st.write("**Total Hours per Student:**")
+            st.write(student_hours)
 
 # Main function to handle user role selection and page display
 def main():
@@ -243,7 +244,7 @@ def main():
         return
 
     # All elements on the main page
-    st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
+    st.image("https://anglebelearn.com/wp-content/uploads/2023/06/Angle-Belearn-Logo.svg", use_column_width=True)  # Add your logo URL
     st.header("User Role Selection")
     role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
