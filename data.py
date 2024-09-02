@@ -154,6 +154,14 @@ def manage_data(data, sheet_name, role):
                 st.error("Name does not match. Please check your input.")
 
 def show_filtered_data(filtered_data, role):
+    # Add month selection after login
+    st.subheader("Select Month")
+    months = sorted(filtered_data["MM"].unique())
+    selected_month = st.selectbox("Select Month", months)
+
+    # Apply month filter
+    filtered_data = filtered_data[filtered_data["MM"] == selected_month]
+
     # Universal filter: text input to filter across all columns
     search_term = st.text_input("Search All Columns", "")
     if search_term:
