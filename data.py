@@ -12,17 +12,6 @@ def add_custom_css():
         body {
             background-color: #e0f7fa;  /* Light blue background */
         }
-        
-        /* Sidebar Styling */
-        [data-testid="stSidebar"] {
-            background-color: #4e79a7;
-        }
-        
-        /* Sidebar Text and Title */
-        [data-testid="stSidebar"] .css-1d391kg p, 
-        [data-testid="stSidebar"] .css-1d391kg h1 {
-            color: white;
-        }
 
         /* Header Titles */
         h1, h2, h3, h4, h5, h6 {
@@ -55,24 +44,6 @@ def add_custom_css():
         }
         .dataframe tr:nth-child(even) {
             background-color: #f2f2f2;
-        }
-
-        /* Error and Warning Messages */
-        .css-10trblm {
-            background-color: #f8d7da !important;
-            color: #721c24 !important;
-        }
-
-        /* Success Messages */
-        .css-17nd5j4 {
-            background-color: #d4edda !important;
-            color: #155724 !important;
-        }
-
-        /* Dropdown and Input Box Styling */
-        .st-bx {
-            background-color: #eaf0f6;
-            color: #333333;
         }
 
         /* Button Styling */
@@ -184,18 +155,18 @@ def manage_data(data, sheet_name, role):
 
 def show_filtered_data(filtered_data, role):
     # Filter by Month Number
-    with st.expander("Filter by Month"):
-        months = sorted(filtered_data["MM"].unique())
-        selected_month = st.selectbox("Select Month", months)
+    st.subheader("Filter by Month")
+    months = sorted(filtered_data["MM"].unique())
+    selected_month = st.selectbox("Select Month", months)
 
     # Apply month filter
     filtered_data = filtered_data[filtered_data["MM"] == selected_month]
 
-    # Date Range Slider
+    # Date Range Selection
     st.subheader("Select Date Range")
     min_date = pd.to_datetime(filtered_data['Date']).min()
     max_date = pd.to_datetime(filtered_data['Date']).max()
-    start_date, end_date = st.slider("Date Range", min_value=min_date, max_value=max_date, value=(min_date, max_date))
+    start_date, end_date = st.date_input("Date Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
     
     # Apply date range filter
     filtered_data = filtered_data[(pd.to_datetime(filtered_data['Date']) >= start_date) & (pd.to_datetime(filtered_data['Date']) <= end_date)]
@@ -271,11 +242,10 @@ def main():
         st.error("No data available or failed to fetch data from Google Sheets.")
         return
 
-    # Create a sidebar with role options
-    with st.sidebar:
-        st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
-        st.title("User Role Selection")
-        role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
+    # All elements on the main page
+    st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
+    st.header("User Role Selection")
+    role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
     # Load the corresponding page based on user selection
     if role == "Student":
@@ -283,7 +253,7 @@ def main():
     elif role == "Teacher":
         teacher_page(data)
     else:
-        st.write("Please select a role from the sidebar.")
+        st.write("Please select a role from the options above.")
 
 # Function to display the Student page
 def student_page(data):
