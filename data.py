@@ -95,12 +95,12 @@ def manage_data(data, sheet_name, role):
     if role == "Student":
         st.header("Filter Options for Student")
         student_ids = sorted(data["Student id"].unique())
-        selected_student_id = st.selectbox("Enter Student ID", student_ids, key='student_id')
-        input_name = st.text_input("Enter the first four letters of your name", key='student_name_input')
+        selected_student_id = st.sidebar.selectbox("Enter Student ID", student_ids, key='student_id')
+        input_name = st.sidebar.text_input("Enter the first four letters of your name", key='student_name_input')
         months = sorted(data["MM"].unique())
-        selected_month = st.selectbox("Select Month", months, key='month_selection')
+        selected_month = st.sidebar.selectbox("Select Month", months, key='month_selection')
 
-        if st.button("Verify"):
+        if st.sidebar.button("Verify Student"):
             filtered_data = data[(data["Student id"] == selected_student_id) & (data["MM"] == selected_month)]
             st.write("Filtered data for student:", filtered_data)  # Debugging output
 
@@ -118,12 +118,12 @@ def manage_data(data, sheet_name, role):
     elif role == "Teacher":
         st.header("Filter Options for Teacher")
         teacher_ids = sorted(data["Teachers ID"].unique())
-        selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids, key='teacher_id')
-        input_name = st.text_input("Enter the first four letters of your name", key='teacher_name_input')
+        selected_teacher_id = st.sidebar.selectbox("Enter Teacher ID", teacher_ids, key='teacher_id')
+        input_name = st.sidebar.text_input("Enter the first four letters of your name", key='teacher_name_input')
         months = sorted(data["MM"].unique())
-        selected_month = st.selectbox("Select Month", months, key='month_selection_teacher')
+        selected_month = st.sidebar.selectbox("Select Month", months, key='month_selection_teacher')
 
-        if st.button("Verify"):
+        if st.sidebar.button("Verify Teacher"):
             filtered_data = data[(data["Teachers ID"] == selected_teacher_id) & (data["MM"] == selected_month)]
             st.write("Filtered data for teacher:", filtered_data)  # Debugging output
 
