@@ -114,19 +114,19 @@ def manage_data(data, sheet_name, role):
 
     # Role-specific filtering
     if role == "Student":
-        st.sidebar.header("Filter Options for Student")
+        st.header("Filter Options for Student")
         # Filter by Student ID
         student_ids = sorted(data["Student id"].unique())
-        selected_student_id = st.sidebar.selectbox("Enter Student ID", student_ids, key='student_id')
+        selected_student_id = st.selectbox("Enter Student ID", student_ids, key='student_id')
 
         # Filter data by selected student ID
         filtered_data = data[data["Student id"] == selected_student_id]
         
         # Ask for the first four letters of the student's name
-        input_name = st.sidebar.text_input("Enter the first four letters of your name", key='student_name_input')
+        input_name = st.text_input("Enter the first four letters of your name", key='student_name_input')
         
         # Button for login verification
-        if st.sidebar.button("Verify Name"):
+        if st.button("Verify Name"):
             # Verify the input name
             actual_name = filtered_data["Student"].values[0]  # Assumes there's only one matching row
             if input_name.lower() == actual_name[:4].lower():
@@ -135,22 +135,22 @@ def manage_data(data, sheet_name, role):
                 st.session_state.role = role
                 st.session_state.filtered_data = filtered_data
             else:
-                st.sidebar.error("Name does not match. Please check your input.")
+                st.error("Name does not match. Please check your input.")
 
     elif role == "Teacher":
-        st.sidebar.header("Filter Options for Teacher")
+        st.header("Filter Options for Teacher")
         # Filter by Teacher ID
         teacher_ids = sorted(data["Teachers ID"].unique())
-        selected_teacher_id = st.sidebar.selectbox("Enter Teacher ID", teacher_ids, key='teacher_id')
+        selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids, key='teacher_id')
 
         # Filter data by selected teacher ID
         filtered_data = data[data["Teachers ID"] == selected_teacher_id]
         
         # Ask for the first four letters of the teacher's name
-        input_name = st.sidebar.text_input("Enter the first four letters of your name", key='teacher_name_input')
+        input_name = st.text_input("Enter the first four letters of your name", key='teacher_name_input')
         
         # Button for login verification
-        if st.sidebar.button("Verify Name"):
+        if st.button("Verify Name"):
             # Verify the input name
             actual_name = filtered_data["Teachers Name"].values[0]  # Assumes there's only one matching row
             if input_name.lower() == actual_name[:4].lower():
@@ -159,20 +159,20 @@ def manage_data(data, sheet_name, role):
                 st.session_state.role = role
                 st.session_state.filtered_data = filtered_data
             else:
-                st.sidebar.error("Name does not match. Please check your input.")
+                st.error("Name does not match. Please check your input.")
 
 def show_filtered_data(filtered_data, role):
     # Add month selection after login
     if 'selected_month' not in st.session_state or st.session_state.selected_month is None:
-        st.sidebar.subheader("Select Month")
+        st.subheader("Select Month")
         months = sorted(filtered_data["MM"].unique())
-        st.session_state.selected_month = st.sidebar.selectbox("Select Month", months)
+        st.session_state.selected_month = st.selectbox("Select Month", months)
 
     # Apply month filter
     filtered_data = filtered_data[filtered_data["MM"] == st.session_state.selected_month]
 
     # Universal filter: text input to filter across all columns
-    search_term = st.sidebar.text_input("Search All Columns", "", key='search_all_columns')
+    search_term = st.text_input("Search All Columns", "", key='search_all_columns')
     if search_term:
         filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
@@ -242,10 +242,10 @@ def main():
         st.error("No data available or failed to fetch data from Google Sheets.")
         return
 
-    # Sidebar elements for role selection and filters
-    st.sidebar.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
-    st.sidebar.header("User Role Selection")
-    role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
+    # All elements on the main page
+    st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
+    st.header("User Role Selection")
+    role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
     # Load the corresponding page based on user selection
     if role == "Student":
@@ -253,7 +253,7 @@ def main():
     elif role == "Teacher":
         teacher_page(data)
     else:
-        st.write("Please select a role from the sidebar.")
+        st.write("Please select a role from the options above.")
 
 # Function to display the Student page
 def student_page(data):
