@@ -71,11 +71,11 @@ def manage_data(data, role):
 
     if role == "Student":
         # Filter by Student ID and verify
-        student_id = st.sidebar.text_input("Enter Student ID")
-        student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name")
+        student_id = st.sidebar.text_input("Enter Student ID").strip().lower()
+        student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
         if st.sidebar.button("Verify Student"):
-            filtered_data = data[(data["Student id"] == student_id) & 
-                                 (data["Student"].str[:4].str.lower() == student_name_prefix.lower())]
+            filtered_data = data[(data["Student id"].str.lower() == student_id) & 
+                                 (data["Student"].str[:4].str.lower() == student_name_prefix)]
             if not filtered_data.empty:
                 # Filter by month
                 month = st.selectbox("Select Month", sorted(filtered_data["MM"].unique()))
@@ -86,11 +86,11 @@ def manage_data(data, role):
     
     elif role == "Teacher":
         # Filter by Teacher ID and verify
-        teacher_id = st.sidebar.text_input("Enter Teacher ID")
-        teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name")
+        teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
+        teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
         if st.sidebar.button("Verify Teacher"):
-            filtered_data = data[(data["Teachers ID"] == teacher_id) & 
-                                 (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix.lower())]
+            filtered_data = data[(data["Teachers ID"].str.lower() == teacher_id) & 
+                                 (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix)]
             if not filtered_data.empty:
                 # Filter by month
                 month = st.selectbox("Select Month", sorted(filtered_data["MM"].unique()))
@@ -105,6 +105,13 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
+        # Display total hours and subject-wise breakdown
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+        st.write("**Subject-wise Hours:**")
+        st.write(subject_hours)
+
     elif role == "Teacher":
         filtered_data = filtered_data[["Date", "Student id", "Student", "Chapter taken", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
@@ -113,6 +120,13 @@ def show_filtered_data(filtered_data, role):
         filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
         styled_data = filtered_data.style.apply(lambda x: ['background-color: yellow' if x.is_duplicate else '' for _ in x], axis=1)
         st.dataframe(styled_data)
+
+        # Display total hours and student-wise breakdown
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+        student_hours = filtered_data.groupby("Student")["Hr"].sum()
+        st.write("**Student-wise Hours:**")
+        st.write(student_hours)
         return
 
     # Display the filtered data for students
