@@ -75,11 +75,17 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
         df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
         df = df.replace(r'^\s*$', pd.NA, regex=True)
         df = df.fillna(method='ffill')
+
+        # Convert all data to string to avoid type issues
+        df = df.astype(str)
+
+        # Debugging output to check data types and content
+        st.write("Data types after conversion:", df.dtypes)
+        st.write("Sample data:", df.head())
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
         df = pd.DataFrame()  # Return an empty DataFrame
 
-    st.write("Fetched data:", df)  # Debugging output
     return df
 
 def manage_data(data, sheet_name, role):
@@ -146,10 +152,10 @@ def show_filtered_data(filtered_data, role):
         st.error("Filtered data is empty.")
         return
 
-    filtered_data.insert(0, range(1, len(filtered_data) + 1))
+    filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
 
     if role == "Student":
-        filtered_data = filtered_data[[ "Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data = filtered_data[["Sl. No.", "Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
         st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
 
@@ -160,7 +166,7 @@ def show_filtered_data(filtered_data, role):
         st.write(subject_hours)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[[ "Date", "Student id", "Student", "Hr", "Type of class"]]
+        filtered_data = filtered_data[["Sl. No.", "Date", "Student id", "Student", "Hr", "Type of class"]]
         filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
         filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
 
