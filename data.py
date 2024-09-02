@@ -124,7 +124,7 @@ def show_filtered_data(filtered_data, role):
         st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
         student_hours = filtered_data.groupby("Student")["Hr"].sum()
         st.write("**Student-wise Hours:**")
-        st.write(student_hours)
+        #st.write(student_hours)
 
     # Display the filtered data for students
     st.write(filtered_data)
