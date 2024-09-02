@@ -38,8 +38,12 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
 # Cache data fetching to prevent redundant calls
 @st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
-    sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
-    data = sheet.get_all_values()
+    try:
+        sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
+        data = sheet.get_all_values()
+    except gspread.exceptions.APIError as e:
+        st.error("An error occurred while accessing Google Sheets. Please try again later.")
+        return pd.DataFrame()
 
     if data and len(data) > 1:
         headers = pd.Series(data[0])
@@ -49,7 +53,7 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         df = pd.DataFrame(data[1:], columns=headers)
         df.replace('', np.nan, inplace=True)
-        df.ffill(inplace=True)  # Updated this line
+        df.ffill(inplace=True)  # Corrected fill method
 
         for column in df.columns:
             df[column] = df[column].astype(str).str.strip()
