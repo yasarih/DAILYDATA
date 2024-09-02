@@ -4,6 +4,86 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import json
 
+# Custom CSS for Styling
+def add_custom_css():
+    st.markdown("""
+        <style>
+        /* General App Background */
+        body {
+            background-color: #f0f2f6;
+        }
+        
+        /* Sidebar Styling */
+        [data-testid="stSidebar"] {
+            background-color: #4e79a7;
+        }
+        
+        /* Sidebar Text and Title */
+        [data-testid="stSidebar"] .css-1d391kg p, 
+        [data-testid="stSidebar"] .css-1d391kg h1 {
+            color: white;
+        }
+
+        /* Header Titles */
+        h1, h2, h3, h4, h5, h6 {
+            color: #333333;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Subheader Styles */
+        .css-18ni7ap h3 {
+            background-color: #4e79a7;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        /* DataFrame Styling */
+        .dataframe {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .dataframe th, .dataframe td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+        .dataframe th {
+            background-color: #4e79a7;
+            color: white;
+        }
+        .dataframe tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        /* Error and Warning Messages */
+        .css-10trblm {
+            background-color: #f8d7da !important;
+            color: #721c24 !important;
+        }
+
+        /* Success Messages */
+        .css-17nd5j4 {
+            background-color: #d4edda !important;
+            color: #155724 !important;
+        }
+
+        /* Dropdown and Input Box Styling */
+        .st-bx {
+            background-color: #eaf0f6;
+            color: #333333;
+        }
+
+        /* Button Styling */
+        .stButton>button {
+            color: white;
+            background-color: #4e79a7;
+            border-radius: 8px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
@@ -160,6 +240,7 @@ def show_filtered_data(filtered_data, role):
 
 # Main function to handle user role selection and page display
 def main():
+    add_custom_css()  # Add custom CSS for better styling
     st.title("📘 Angle Belearn: Your Daily Class Insights")
 
     # Sheet and headers details
