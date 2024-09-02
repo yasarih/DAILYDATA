@@ -66,7 +66,6 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
-@st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
     data = sheet.get_all_values()
@@ -191,6 +190,7 @@ def main():
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
 
+    # Fetch the data every time the app is accessed to ensure live updates
     data = fetch_all_data(spreadsheet_name, worksheet_name)
 
     role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
