@@ -10,7 +10,7 @@ def add_custom_css():
         <style>
         /* General App Background */
         body {
-            background-color: #f0f2f6;
+            background-color: #e0f7fa;  /* Light blue background */
         }
         
         /* Sidebar Styling */
@@ -192,9 +192,12 @@ def show_filtered_data(filtered_data, role):
     if search_term:
         filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
+    # Add Serial Numbers
+    filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
+
     if role == "Student":
         # Select specific columns to show for students
-        filtered_data = filtered_data[["Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data = filtered_data[["Sl. No.", "Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
         
         # Convert 'Hr' to numeric and format to two decimal places
         filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
@@ -212,7 +215,7 @@ def show_filtered_data(filtered_data, role):
 
     elif role == "Teacher":
         # Select specific columns to show for teachers
-        filtered_data = filtered_data[["Date", "Student id", "Student", "Hr", "Type of class"]]
+        filtered_data = filtered_data[["Sl. No.", "Date", "Student id", "Student", "Hr", "Type of class"]]
         
         # Convert 'Hr' to numeric and format to two decimal places
         filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
