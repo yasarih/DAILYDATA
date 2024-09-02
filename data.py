@@ -72,35 +72,27 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
     data = sheet.get_all_values()
 
     if data and len(data) > 1:
-        # Fix duplicate and empty headers
         headers = pd.Series(data[0])
-        headers = headers.fillna('').str.strip()  # Fill empty headers with empty strings
-        headers = headers.where(headers != '', other='Unnamed')  # Rename empty headers as 'Unnamed'
-        headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')  # Make headers unique
+        headers = headers.fillna('').str.strip()
+        headers = headers.where(headers != '', other='Unnamed')
+        headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
-        df = pd.DataFrame(data[1:], columns=headers)  # Convert to DataFrame with unique headers
-        df.replace('', np.nan, inplace=True)  # Replace empty strings with NaN
-        df.fillna(method='ffill', inplace=True)  # Forward fill to handle blanks appropriately
+        df = pd.DataFrame(data[1:], columns=headers)
+        df.replace('', np.nan, inplace=True)
+        df.fillna(method='ffill', inplace=True)
 
-        # Ensure all columns are strings to avoid type issues
         for column in df.columns:
             df[column] = df[column].astype(str).str.strip()
 
-        # Convert numeric columns to appropriate types
-        numeric_cols = ['Hr']  # Add other numeric column names if needed
+        numeric_cols = ['Hr']
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # Debugging output to check data types and content
-        st.write("Data types after conversion:", df.dtypes)
-        st.write("Sample data:", df.head())
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
-        df = pd.DataFrame()  # Return an empty DataFrame
+        df = pd.DataFrame()
 
     return df
-
-# The rest of your functions remain unchanged...
 
 def manage_data(data, sheet_name, role):
     st.subheader(f"📊 {sheet_name} Data")
@@ -122,8 +114,6 @@ def manage_data(data, sheet_name, role):
 
         if st.sidebar.button("Verify Student"):
             filtered_data = data[(data["Student id"] == selected_student_id) & (data["MM"] == selected_month)]
-            st.write("Filtered data for student:", filtered_data)  # Debugging output
-
             if not filtered_data.empty:
                 actual_name = filtered_data["Student"].values[0]
                 if input_name.lower() == actual_name[:4].lower():
@@ -145,8 +135,6 @@ def manage_data(data, sheet_name, role):
 
         if st.sidebar.button("Verify Teacher"):
             filtered_data = data[(data["Teachers ID"] == selected_teacher_id) & (data["MM"] == selected_month)]
-            st.write("Filtered data for teacher:", filtered_data)  # Debugging output
-
             if not filtered_data.empty:
                 actual_name = filtered_data["Teachers Name"].values[0]
                 if input_name.lower() == actual_name[:4].lower():
