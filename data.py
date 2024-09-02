@@ -139,17 +139,19 @@ def manage_data(data, sheet_name, role):
 
     # Role-specific filtering
     if role == "Student":
-        with st.sidebar:
-            st.header("Filter Options for Student")
-            # Filter by Student ID
-            student_ids = sorted(data["Student id"].unique())
-            selected_student_id = st.selectbox("Enter Student ID", student_ids)
+        st.header("Filter Options for Student")
+        # Filter by Student ID
+        student_ids = sorted(data["Student id"].unique())
+        selected_student_id = st.selectbox("Enter Student ID", student_ids)
 
-            # Filter data by selected student ID
-            filtered_data = data[data["Student id"] == selected_student_id]
-            
-            # Ask for the first four letters of the student's name
-            input_name = st.text_input("Enter the first four letters of your name")
+        # Filter data by selected student ID
+        filtered_data = data[data["Student id"] == selected_student_id]
+        
+        # Ask for the first four letters of the student's name
+        input_name = st.text_input("Enter the first four letters of your name")
+        
+        # Button for login verification
+        if st.button("Verify Name"):
             # Verify the input name
             actual_name = filtered_data["Student"].values[0]  # Assumes there's only one matching row
             if input_name.lower() == actual_name[:4].lower():
@@ -159,17 +161,19 @@ def manage_data(data, sheet_name, role):
                 st.error("Name does not match. Please check your input.")
 
     elif role == "Teacher":
-        with st.sidebar:
-            st.header("Filter Options for Teacher")
-            # Filter by Teacher ID
-            teacher_ids = sorted(data["Teachers ID"].unique())
-            selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids)
+        st.header("Filter Options for Teacher")
+        # Filter by Teacher ID
+        teacher_ids = sorted(data["Teachers ID"].unique())
+        selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids)
 
-            # Filter data by selected teacher ID
-            filtered_data = data[data["Teachers ID"] == selected_teacher_id]
-            
-            # Ask for the first four letters of the teacher's name
-            input_name = st.text_input("Enter the first four letters of your name")
+        # Filter data by selected teacher ID
+        filtered_data = data[data["Teachers ID"] == selected_teacher_id]
+        
+        # Ask for the first four letters of the teacher's name
+        input_name = st.text_input("Enter the first four letters of your name")
+        
+        # Button for login verification
+        if st.button("Verify Name"):
             # Verify the input name
             actual_name = filtered_data["Teachers Name"].values[0]  # Assumes there's only one matching row
             if input_name.lower() == actual_name[:4].lower():
@@ -186,6 +190,15 @@ def show_filtered_data(filtered_data, role):
 
     # Apply month filter
     filtered_data = filtered_data[filtered_data["MM"] == selected_month]
+
+    # Date Range Slider
+    st.subheader("Select Date Range")
+    min_date = pd.to_datetime(filtered_data['Date']).min()
+    max_date = pd.to_datetime(filtered_data['Date']).max()
+    start_date, end_date = st.slider("Date Range", min_value=min_date, max_value=max_date, value=(min_date, max_date))
+    
+    # Apply date range filter
+    filtered_data = filtered_data[(pd.to_datetime(filtered_data['Date']) >= start_date) & (pd.to_datetime(filtered_data['Date']) <= end_date)]
 
     # Universal filter: text input to filter across all columns
     search_term = st.text_input("Search All Columns", "")
