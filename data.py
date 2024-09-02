@@ -36,7 +36,7 @@ def add_custom_css():
             color: white;
         }
         .dataframe td {
-            background-color: #ffffff;  /* Set all cells to white */
+            background-color: #ffffff;
         }
         .stButton>button {
             color: white;
@@ -46,12 +46,10 @@ def add_custom_css():
         </style>
         """, unsafe_allow_html=True)
 
-# Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
     return credentials_info
 
-# Function to connect to Google Sheets using the credentials from secrets for the new project
 def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     credentials_info = load_credentials_from_secrets()
     scopes = [
@@ -67,7 +65,6 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
-# Cache data fetching to prevent redundant calls
 @st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
@@ -75,9 +72,9 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
     if data and len(data) > 1:
         df = pd.DataFrame(data[1:], columns=data[0])  # Convert to DataFrame
-        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)  # Remove any leading/trailing whitespace
-        df = df.replace(r'^\s*$', pd.NA, regex=True)  # Replace empty strings with NaN
-        df = df.fillna(method='ffill')  # Fill missing values to ensure continuity
+        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+        df = df.replace(r'^\s*$', pd.NA, regex=True)
+        df = df.fillna(method='ffill')
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
         df = pd.DataFrame()  # Return an empty DataFrame
@@ -85,9 +82,12 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
     st.write("Fetched data:", df)  # Debugging output
     return df
 
-# Function to manage data display and filtering for a specific worksheet
 def manage_data(data, sheet_name, role):
     st.subheader(f"📊 {sheet_name} Data")
+    
+    if data.empty:
+        st.error("Data is empty, please check your Google Sheets data.")
+        return
 
     if 'selected_month' not in st.session_state:
         st.session_state.selected_month = None
@@ -142,6 +142,10 @@ def manage_data(data, sheet_name, role):
         show_filtered_data(st.session_state.filtered_data, role)
 
 def show_filtered_data(filtered_data, role):
+    if filtered_data.empty:
+        st.error("Filtered data is empty.")
+        return
+
     filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
 
     if role == "Student":
