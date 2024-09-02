@@ -35,7 +35,8 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
-# Function to fetch all data without caching to always get updated values
+# Cache data fetching to prevent redundant calls
+@st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
     data = sheet.get_all_values()
@@ -48,7 +49,7 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         df = pd.DataFrame(data[1:], columns=headers)
         df.replace('', np.nan, inplace=True)
-        df.fillna(method='ffill', inplace=True)
+        df.ffill(inplace=True)  # Updated this line
 
         for column in df.columns:
             df[column] = df[column].astype(str).str.strip()
@@ -68,17 +69,16 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
-    # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
-
     if role == "Student":
         # Filter by Student ID and verify
-        student_id = st.sidebar.text_input("Enter Student ID").strip().lower()
-        student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
+        student_id = st.sidebar.text_input("Enter Student ID")
+        student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name")
+        month_selected = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+
         if st.sidebar.button("Verify Student"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Student id"].str.lower() == student_id) & 
-                                 (data["Student"].str[:4].str.lower() == student_name_prefix)]
+            filtered_data = data[(data["Student id"].str.lower() == student_id.lower()) & 
+                                 (data["Student"].str[:4].str.lower() == student_name_prefix.lower()) &
+                                 (data["MM"] == month_selected)]
             if not filtered_data.empty:
                 show_filtered_data(filtered_data, role)
             else:
@@ -86,49 +86,22 @@ def manage_data(data, role):
     
     elif role == "Teacher":
         # Filter by Teacher ID and verify
-        teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
-        teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
+        teacher_id = st.sidebar.text_input("Enter Teacher ID")
+        teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name")
+        month_selected = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+
         if st.sidebar.button("Verify Teacher"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Teachers ID"].str.lower() == teacher_id) & 
-                                 (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix)]
+            filtered_data = data[(data["Teachers ID"].str.lower() == teacher_id.lower()) & 
+                                 (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix.lower()) &
+                                 (data["MM"] == month_selected)]
             if not filtered_data.empty:
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
 
 def show_filtered_data(filtered_data, role):
-    # Customize columns display based on role
-    if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
-
-        # Display total hours and subject-wise breakdown
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Subject-wise Hours:**")
-        st.write(subject_hours)
-        st.write(filtered_data)
-
-    elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Student id", "Student", "Chapter taken", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
-
-        # Highlight duplicate entries for teachers
-        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
-        styled_data = filtered_data.style.apply(lambda x: ['background-color: yellow' if x.is_duplicate else '' for _ in x], axis=1)
-        st.dataframe(styled_data)
-
-        # Display total hours and student-wise breakdown
-        total_hours = filtered_data["Hr"].sum()
-        #st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        student_hours = filtered_data.groupby("Student")["Hr"].sum()
-        st.write("**Student-wise Hours:**")
-        st.write(student_hours)
-
-    # Display the filtered data for students
-    
+    # Display the filtered data
+    st.write(filtered_data)
 
 # Main function to handle user role selection and page display
 def main():
@@ -141,14 +114,9 @@ def main():
     # Create a sidebar with role options
     role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
-    if st.sidebar.button("Refresh Data"):
-        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
-    
-    if "data" not in st.session_state:
-        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
-
     if role == "Student" or role == "Teacher":
-        manage_data(st.session_state.data, role)
+        data = fetch_all_data(spreadsheet_name, worksheet_name)
+        manage_data(data, role)
     else:
         st.write("Please select a role from the sidebar.")
 
