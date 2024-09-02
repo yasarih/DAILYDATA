@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+import numpy as np
 import json
 
 # Function to load credentials from Streamlit secrets for the new project
@@ -47,7 +48,7 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
         df = pd.DataFrame(data[1:], columns=headers)
-        df.replace('', pd.NA, inplace=True)
+        df.replace('', np.nan, inplace=True)
         df.fillna(method='ffill', inplace=True)
 
         for column in df.columns:
