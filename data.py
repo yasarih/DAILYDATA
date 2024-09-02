@@ -247,7 +247,7 @@ def main():
         return
 
     # All elements on the main page
-    st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
+    st.image("https://anglebelearn.com/wp-content/uploads/2023/06/Angle-Belearn-Logo.svg", use_column_width=True)  # Add your logo URL
     st.header("User Role Selection")
     role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
