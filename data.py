@@ -108,18 +108,22 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 def manage_data(data, sheet_name, role):
     st.subheader(f"📊 {sheet_name} Data")
 
+    # Check if month selection is in session state
+    if 'selected_month' not in st.session_state:
+        st.session_state.selected_month = None
+
     # Role-specific filtering
     if role == "Student":
         st.header("Filter Options for Student")
         # Filter by Student ID
         student_ids = sorted(data["Student id"].unique())
-        selected_student_id = st.selectbox("Enter Student ID", student_ids)
+        selected_student_id = st.selectbox("Enter Student ID", student_ids, key='student_id')
 
         # Filter data by selected student ID
         filtered_data = data[data["Student id"] == selected_student_id]
         
         # Ask for the first four letters of the student's name
-        input_name = st.text_input("Enter the first four letters of your name")
+        input_name = st.text_input("Enter the first four letters of your name", key='student_name_input')
         
         # Button for login verification
         if st.button("Verify Name"):
@@ -127,6 +131,9 @@ def manage_data(data, sheet_name, role):
             actual_name = filtered_data["Student"].values[0]  # Assumes there's only one matching row
             if input_name.lower() == actual_name[:4].lower():
                 # Proceed if names match
+                st.session_state.logged_in = True
+                st.session_state.role = role
+                st.session_state.filtered_data = filtered_data
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Name does not match. Please check your input.")
@@ -135,13 +142,13 @@ def manage_data(data, sheet_name, role):
         st.header("Filter Options for Teacher")
         # Filter by Teacher ID
         teacher_ids = sorted(data["Teachers ID"].unique())
-        selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids)
+        selected_teacher_id = st.selectbox("Enter Teacher ID", teacher_ids, key='teacher_id')
 
         # Filter data by selected teacher ID
         filtered_data = data[data["Teachers ID"] == selected_teacher_id]
         
         # Ask for the first four letters of the teacher's name
-        input_name = st.text_input("Enter the first four letters of your name")
+        input_name = st.text_input("Enter the first four letters of your name", key='teacher_name_input')
         
         # Button for login verification
         if st.button("Verify Name"):
@@ -149,21 +156,25 @@ def manage_data(data, sheet_name, role):
             actual_name = filtered_data["Teachers Name"].values[0]  # Assumes there's only one matching row
             if input_name.lower() == actual_name[:4].lower():
                 # Proceed if names match
+                st.session_state.logged_in = True
+                st.session_state.role = role
+                st.session_state.filtered_data = filtered_data
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Name does not match. Please check your input.")
 
 def show_filtered_data(filtered_data, role):
     # Add month selection after login
-    st.subheader("Select Month")
-    months = sorted(filtered_data["MM"].unique())
-    selected_month = st.selectbox("Select Month", months)
+    if 'selected_month' not in st.session_state or st.session_state.selected_month is None:
+        st.subheader("Select Month")
+        months = sorted(filtered_data["MM"].unique())
+        st.session_state.selected_month = st.selectbox("Select Month", months)
 
     # Apply month filter
-    filtered_data = filtered_data[filtered_data["MM"] == selected_month]
+    filtered_data = filtered_data[filtered_data["MM"] == st.session_state.selected_month]
 
     # Universal filter: text input to filter across all columns
-    search_term = st.text_input("Search All Columns", "")
+    search_term = st.text_input("Search All Columns", "", key='search_all_columns')
     if search_term:
         filtered_data = filtered_data[filtered_data.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)]
 
@@ -234,7 +245,7 @@ def main():
         return
 
     # All elements on the main page
-    st.image("https://example.com/logo.png", use_column_width=True)  # Add your logo URL
+    st.image("https://anglebelearn.com/wp-content/uploads/2023/06/Angle-Belearn-Logo.svg", use_column_width=True)  # Add your logo URL
     st.header("User Role Selection")
     role = st.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
@@ -248,13 +259,19 @@ def main():
 
 # Function to display the Student page
 def student_page(data):
-    st.title("🎓 Student Page")
-    manage_data(data, 'Student Daily Data', role="Student")
+    if 'logged_in' in st.session_state and st.session_state.logged_in and st.session_state.role == "Student":
+        show_filtered_data(st.session_state.filtered_data, role="Student")
+    else:
+        st.title("🎓 Student Page")
+        manage_data(data, 'Student Daily Data', role="Student")
 
 # Function to display the Teacher page
 def teacher_page(data):
-    st.title("👩‍🏫 Teacher Page")
-    manage_data(data, 'Teacher Daily Data', role="Teacher")
+    if 'logged_in' in st.session_state and st.session_state.logged_in and st.session_state.role == "Teacher":
+        show_filtered_data(st.session_state.filtered_data, role="Teacher")
+    else:
+        st.title("👩‍🏫 Teacher Page")
+        manage_data(data, 'Teacher Daily Data', role="Teacher")
 
 if __name__ == "__main__":
     main()
