@@ -2,70 +2,40 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-import numpy as np
 import json
 
-# Custom CSS for Styling
-def add_custom_css():
-    st.markdown("""
-        <style>
-        body {
-            background-color: #e0f7fa;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            color: #333333;
-            font-family: 'Arial', sans-serif;
-        }
-        .css-18ni7ap h3 {
-            background-color: #4e79a7;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-        }
-        .dataframe {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        .dataframe th, .dataframe td {
-            border: 1px solid #dddddd;
-            text-align: left;
-            padding: 8px;
-        }
-        .dataframe th {
-            background-color: #4e79a7;
-            color: white;
-        }
-        .dataframe td {
-            background-color: #ffffff;
-        }
-        .stButton>button {
-            color: white;
-            background-color: #4e79a7;
-            border-radius: 8px;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
+# Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
     return credentials_info
 
+# Function to connect to Google Sheets using the credentials from secrets for the new project
 def connect_to_google_sheets(spreadsheet_name, worksheet_name):
+    # Load the credentials from Streamlit secrets
     credentials_info = load_credentials_from_secrets()
+    
+    # Define the required scopes for Google Sheets API
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/drive.file"
     ]
+    
+    # Create credentials using the loaded info and defined scopes
     credentials = Credentials.from_service_account_info(
         credentials_info,
         scopes=scopes
     )
+    
+    # Authorize gspread with the credentials
     client = gspread.authorize(credentials)
+    
+    # Open the spreadsheet and access the specified worksheet
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
+# Cache data fetching to prevent redundant calls
+@st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
     data = sheet.get_all_values()
@@ -77,7 +47,7 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
         df = pd.DataFrame(data[1:], columns=headers)
-        df.replace('', np.nan, inplace=True)
+        df.replace('', pd.NA, inplace=True)
         df.fillna(method='ffill', inplace=True)
 
         for column in df.columns:
@@ -85,7 +55,8 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         numeric_cols = ['Hr']
         for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
@@ -93,122 +64,50 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
     return df
 
-def manage_data(data, sheet_name, role):
-    st.subheader(f"📊 {sheet_name} Data")
-    
-    if data.empty:
-        st.error("Data is empty, please check your Google Sheets data.")
-        return
-
-    if 'selected_month' not in st.session_state:
-        st.session_state.selected_month = None
+# Function to manage data display and filtering for a specific worksheet
+def manage_data(data, role):
+    st.subheader(f"{role} Data")
 
     if role == "Student":
-        st.header("Filter Options for Student")
-        student_ids = sorted(data["Student id"].unique())
-        selected_student_id = st.sidebar.selectbox("Enter Student ID", student_ids, key='student_id')
-        input_name = st.sidebar.text_input("Enter the first four letters of your name", key='student_name_input')
-        months = sorted(data["MM"].unique())
-        selected_month = st.sidebar.selectbox("Select Month", months, key='month_selection')
-
+        # Filter by Student ID and verify
+        student_id = st.sidebar.text_input("Enter Student ID")
+        student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name")
         if st.sidebar.button("Verify Student"):
-            filtered_data = data[(data["Student id"] == selected_student_id) & (data["MM"] == selected_month)]
+            filtered_data = data[(data["Student id"] == student_id) & 
+                                 (data["Student"].str[:4].str.lower() == student_name_prefix.lower())]
             if not filtered_data.empty:
-                actual_name = filtered_data["Student"].values[0]
-                if input_name.lower() == actual_name[:4].lower():
-                    st.session_state.logged_in = True
-                    st.session_state.role = role
-                    st.session_state.filtered_data = filtered_data
-                else:
-                    st.error("Name does not match. Please check your input.")
+                st.write(filtered_data)
             else:
-                st.error("No data found for the selected Student ID and Month.")
-
+                st.error("Verification failed. Please check your details.")
+    
     elif role == "Teacher":
-        st.header("Filter Options for Teacher")
-        teacher_ids = sorted(data["Teachers ID"].unique())
-        selected_teacher_id = st.sidebar.selectbox("Enter Teacher ID", teacher_ids, key='teacher_id')
-        input_name = st.sidebar.text_input("Enter the first four letters of your name", key='teacher_name_input')
-        months = sorted(data["MM"].unique())
-        selected_month = st.sidebar.selectbox("Select Month", months, key='month_selection_teacher')
-
+        # Filter by Teacher ID and verify
+        teacher_id = st.sidebar.text_input("Enter Teacher ID")
+        teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name")
         if st.sidebar.button("Verify Teacher"):
-            filtered_data = data[(data["Teachers ID"] == selected_teacher_id) & (data["MM"] == selected_month)]
+            filtered_data = data[(data["Teachers ID"] == teacher_id) & 
+                                 (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix.lower())]
             if not filtered_data.empty:
-                actual_name = filtered_data["Teachers Name"].values[0]
-                if input_name.lower() == actual_name[:4].lower():
-                    st.session_state.logged_in = True
-                    st.session_state.role = role
-                    st.session_state.filtered_data = filtered_data
-                else:
-                    st.error("Name does not match. Please check your input.")
+                st.write(filtered_data)
             else:
-                st.error("No data found for the selected Teacher ID and Month.")
+                st.error("Verification failed. Please check your details.")
 
-    if 'logged_in' in st.session_state and st.session_state.logged_in and st.session_state.role == role:
-        show_filtered_data(st.session_state.filtered_data, role)
-
-def show_filtered_data(filtered_data, role):
-    if filtered_data.empty:
-        st.error("Filtered data is empty.")
-        return
-
-    filtered_data.insert(0, 'Sl. No.', range(1, len(filtered_data) + 1))
-
-    if role == "Student":
-        filtered_data = filtered_data[["Sl. No.", "Date", "Subject", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
-        st.write(filtered_data.to_html(index=False), unsafe_allow_html=True)
-
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours**: {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Total Hours per Subject:**")
-        st.write(subject_hours)
-
-    elif role == "Teacher":
-        filtered_data = filtered_data[["Sl. No.", "Date", "Student id", "Student", "Hr", "Type of class"]]
-        filtered_data["Hr"] = pd.to_numeric(filtered_data["Hr"], errors='coerce').round(2)
-        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Student id'], keep=False)
-
-        def highlight_duplicates(row):
-            return ['background-color: red' if row.is_duplicate else '' for _ in row]
-
-        styled_data = filtered_data.style.apply(highlight_duplicates, axis=1)
-        st.write(styled_data.to_html(index=False), unsafe_allow_html=True)
-
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours**: {total_hours:.2f}")
-        student_hours = filtered_data.groupby("Student")["Hr"].sum()
-        st.write("**Total Hours per Student:**")
-        st.write(student_hours)
-
+# Main function to handle user role selection and page display
 def main():
-    add_custom_css()
-    st.title("📖 Angle Belearn: Your Daily Class Insights")
+    st.title("Angle Belearn: Your Daily Class Insights")
 
+    # Sheet and headers details
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
 
-    # Fetch the data every time the app is accessed to ensure live updates
-    data = fetch_all_data(spreadsheet_name, worksheet_name)
-
+    # Create a sidebar with role options
     role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
 
-    if role == "Student":
-        student_page(data)
-    elif role == "Teacher":
-        teacher_page(data)
+    if role == "Student" or role == "Teacher":
+        data = fetch_all_data(spreadsheet_name, worksheet_name)
+        manage_data(data, role)
     else:
         st.write("Please select a role from the sidebar.")
-
-def student_page(data):
-    st.title("📖 Student Page")
-    manage_data(data, 'Student Daily Data', role="Student")
-
-def teacher_page(data):
-    st.title("📚 Teacher Page")
-    manage_data(data, 'Teacher Daily Data', role="Teacher")
 
 if __name__ == "__main__":
     main()
