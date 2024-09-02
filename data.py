@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+import numpy as np
 import json
 
 # Custom CSS for Styling
@@ -72,12 +73,12 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
     if data and len(data) > 1:
         df = pd.DataFrame(data[1:], columns=data[0])  # Convert to DataFrame
-        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-        df = df.replace(r'^\s*$', pd.NA, regex=True)
-        df = df.fillna(method='ffill')
+        df.replace('', np.nan, inplace=True)  # Replace empty strings with NaN
+        df.fillna(method='ffill', inplace=True)  # Forward fill to handle blanks appropriately
 
-        # Convert all data to string to avoid type issues
-        df = df.astype(str)
+        # Ensure all columns are strings to avoid type issues
+        for column in df.columns:
+            df[column] = df[column].astype(str).str.strip()
 
         # Debugging output to check data types and content
         st.write("Data types after conversion:", df.dtypes)
