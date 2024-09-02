@@ -80,6 +80,11 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
         for column in df.columns:
             df[column] = df[column].astype(str).str.strip()
 
+        # Convert numeric columns to appropriate types
+        numeric_cols = ['Hr']  # Add other numeric column names if needed
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
         # Debugging output to check data types and content
         st.write("Data types after conversion:", df.dtypes)
         st.write("Sample data:", df.head())
@@ -206,11 +211,11 @@ def main():
         st.write("Please select a role from the options above.")
 
 def student_page(data):
-    st.title("🎓 Student Page")
+    st.title("📖 Student Page")
     manage_data(data, 'Student Daily Data', role="Student")
 
 def teacher_page(data):
-    st.title("👩‍🏫 Teacher Page")
+    st.title("📚 Teacher Page")
     manage_data(data, 'Teacher Daily Data', role="Teacher")
 
 if __name__ == "__main__":
