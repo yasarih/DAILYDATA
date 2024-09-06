@@ -76,28 +76,16 @@ def extract_first_letters(name):
 
 # Salary calculation function (for overall salary)
 def calculate_salary(row):
-    class_level = row['Class'].strip()  # Strip to remove any leading/trailing spaces
+    student_id = row['Student id'].strip().lower()  # To identify the demo class using student ID
     syllabus = row['Syllabus'].strip().lower()
     class_type = row['Type of class'].strip().lower()
     hours = row['Hr']
 
-    # Map class ranges to a single representative class level
-    if "1-10" in class_level:
-        numeric_class_level = 10
-    elif "11-12" in class_level:
-        numeric_class_level = 12
-    else:
-        try:
-            numeric_class_level = int(class_level)
-        except ValueError:
-            return 0  # Return 0 for invalid class values
-
-    # Handle demo classes based on Syllabus instead of Type of Class
-    if syllabus == "demo":
-        if numeric_class_level <= 10:
-            return hours * 150
-        elif numeric_class_level >= 11:
-            return hours * 180
+    # Handle demo classes based on the 'Student id'
+    if 'demo class i - x' in student_id:
+        return hours * 150
+    elif 'demo class xi - xii' in student_id:
+        return hours * 180
 
     # Handle paid classes
     elif class_type.startswith("paid"):
@@ -105,22 +93,26 @@ def calculate_salary(row):
 
     # Handle regular, additional, exam types based on syllabus and class level
     else:
+        class_level = int(row['Class']) if row['Class'].isdigit() else None
+
         if syllabus in ['igcse', 'ib']:
-            if 1 <= numeric_class_level <= 4:
-                return hours * 120
-            elif 5 <= numeric_class_level <= 7:
-                return hours * 150
-            elif 8 <= numeric_class_level <= 10:
-                return hours * 170
-            elif 11 <= numeric_class_level <= 12:
-                return hours * 200
+            if class_level is not None:
+                if 1 <= class_level <= 4:
+                    return hours * 120
+                elif 5 <= class_level <= 7:
+                    return hours * 150
+                elif 8 <= class_level <= 10:
+                    return hours * 170
+                elif 11 <= class_level <= 12:
+                    return hours * 200
         else:
-            if 1 <= numeric_class_level <= 4:
-                return hours * 120
-            elif 5 <= numeric_class_level <= 10:
-                return hours * 150
-            elif 11 <= numeric_class_level <= 12:
-                return hours * 180
+            if class_level is not None:
+                if 1 <= class_level <= 4:
+                    return hours * 120
+                elif 5 <= class_level <= 10:
+                    return hours * 150
+                elif 11 <= class_level <= 12:
+                    return hours * 180
 
     return 0  # Default case if no condition matches
 
