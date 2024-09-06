@@ -48,7 +48,7 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         df = pd.DataFrame(data[1:], columns=headers)
         df.replace('', np.nan, inplace=True)
-        df.fillna(method='ffill', inplace=True)
+        df.ffill(inplace=True)  # Use forward fill instead of deprecated method
 
         for column in df.columns:
             df[column] = df[column].astype(str).str.strip()
@@ -64,55 +64,50 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
     return df
 
-# Function to calculate salary for teachers
-# Function to calculate salary for teachers
-# Function to calculate salary for teachers
+# Function to extract the first few letters from the name
+def extract_first_letters(name):
+    name_parts = name.strip().split()  # Split the name by spaces
+    if len(name_parts) >= 2:
+        # If there are two parts (first name and last name), take first three letters of first name and first letter of last name
+        return (name_parts[0][:3] + name_parts[1][0]).lower()
+    else:
+        # Otherwise, take the first four letters of the first name
+        return name_parts[0][:4].lower()
+
+# Salary calculation function
 def calculate_salary(row):
-    type_of_class = row['Type of class'].strip().lower()  # Use strip() to remove leading/trailing spaces
-    board = row['Syllabus'].strip().lower()
+    class_level = int(row['Class'])
+    syllabus = row['Syllabus']
+    class_type = row['Type of class'].lower()
     hours = row['Hr']
-    
-    try:
-        class_level = int(row['Class'])  # Attempt to convert class to an integer
-    except ValueError:
-        return 0  # If class cannot be converted to an integer, return 0 salary
 
-    # Regular, Additional, Exam classes
-    if "regular" in type_of_class or "additional" in type_of_class or "exam" in type_of_class:
-        if board in ['igcse', 'ib']:
-            if 1 <= class_level <= 4:
-                rate = 120
-            elif 5 <= class_level <= 7:
-                rate = 150
-            elif 8 <= class_level <= 10:
-                rate = 170
-            elif 11 <= class_level <= 12:
-                rate = 200
-        else:  # Other boards
-            if 1 <= class_level <= 4:
-                rate = 120
-            elif 5 <= class_level <= 10:
-                rate = 150
-            elif 11 <= class_level <= 12:
-                rate = 180
-
-    # Demo classes
-    elif "demo" in type_of_class:
+    if "demo" in class_type:
         if 1 <= class_level <= 10:
-            rate = 150
+            return hours * 150
         elif 11 <= class_level <= 12:
-            rate = 180
+            return hours * 180
 
-    # Paid classes
-    elif "paid" in type_of_class:
-        return hours * 4 * 100  # Different calculation for paid classes
+    elif class_type.startswith("paid"):
+        return hours * 4 * 100
 
     else:
-        return 0  # No salary for other types
-
-    return rate * hours
-
-
+        if syllabus in ['IGCSE', 'IB']:
+            if 1 <= class_level <= 4:
+                return hours * 120
+            elif 5 <= class_level <= 7:
+                return hours * 150
+            elif 8 <= class_level <= 10:
+                return hours * 170
+            elif 11 <= class_level <= 12:
+                return hours * 200
+        else:
+            if 1 <= class_level <= 4:
+                return hours * 120
+            elif 5 <= class_level <= 10:
+                return hours * 150
+            elif 11 <= class_level <= 12:
+                return hours * 180
+    return 0  # Default case if no condition matches
 
 # Function to manage data display and filtering for a specific worksheet
 def manage_data(data, role):
@@ -162,29 +157,24 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Class", "Syllabus", "Type of class", "Chapter taken", "Hr"]]
+        filtered_data = filtered_data[["Date", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
-
-        # Calculate salary for each entry
-        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
 
         # Highlight duplicate entries for teachers
         filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Class'], keep=False)
         styled_data = filtered_data.style.apply(lambda x: ['background-color: yellow' if x.is_duplicate else '' for _ in x], axis=1)
         st.dataframe(styled_data)
 
-        # Display total hours and class-wise breakdown
+        # Display total hours
         total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        
-        # Split according to class, syllabus, and type of class
-        class_split = filtered_data.groupby(["Class", "Syllabus", "Type of class"])["Hr"].sum()
-        st.write("**Class, Syllabus, and Type of Class-wise Hours:**")
-        st.write(class_split)
 
-        # Display total salary
-        total_salary = filtered_data["Salary"].sum()
-        st.write(f"**Total Salary:** ₹{total_salary:.2f}")
+        # Calculate salary per class type, syllabus, etc.
+        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['Salary'].sum()
+
+        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+        st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
+        st.write(filtered_data)
 
 # Main function to handle user role selection and page display
 def main():
