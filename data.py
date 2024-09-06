@@ -157,7 +157,7 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data = filtered_data[["Date","Student id","Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
         st.subheader("Daily Class Data")
