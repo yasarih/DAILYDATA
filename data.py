@@ -66,11 +66,16 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
 # Function to calculate salary for teachers
 # Function to calculate salary for teachers
+# Function to calculate salary for teachers
 def calculate_salary(row):
     type_of_class = row['Type of class'].strip().lower()  # Use strip() to remove leading/trailing spaces
     board = row['Syllabus'].strip().lower()
     hours = row['Hr']
-    class_level = int(row['Class'])
+    
+    try:
+        class_level = int(row['Class'])  # Attempt to convert class to an integer
+    except ValueError:
+        return 0  # If class cannot be converted to an integer, return 0 salary
 
     # Regular, Additional, Exam classes
     if "regular" in type_of_class or "additional" in type_of_class or "exam" in type_of_class:
@@ -106,6 +111,7 @@ def calculate_salary(row):
         return 0  # No salary for other types
 
     return rate * hours
+
 
 
 # Function to manage data display and filtering for a specific worksheet
