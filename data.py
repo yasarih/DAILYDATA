@@ -76,17 +76,19 @@ def extract_first_letters(name):
 
 # Salary calculation function (for overall salary)
 # Salary calculation function (for overall salary)
+# Salary calculation function (for overall salary)
 def calculate_salary(row):
-    class_level = row['Class'].strip()  # Since class is stored as '1-10' or '11-12', treat it as a string
-    syllabus = row['Syllabus']
-    class_type = row['Type of class'].lower()
+    class_level = row['Class'].strip()  # Strip to remove any leading/trailing spaces
+    syllabus = row['Syllabus'].strip().lower()
+    class_type = row['Type of class'].strip().lower()
     hours = row['Hr']
 
     # Handle demo classes with '1-10' or '11-12'
-    if class_level == "1-10" and "demo" in class_type:
-        return hours * 150
-    elif class_level == "11-12" and "demo" in class_type:
-        return hours * 180
+    if "demo" in class_type:
+        if "1-10" in class_level:
+            return hours * 150
+        elif "11-12" in class_level:
+            return hours * 180
 
     # Handle paid classes
     elif class_type.startswith("paid"):
@@ -95,18 +97,18 @@ def calculate_salary(row):
     # Handle regular, additional, exam types based on syllabus and class level
     else:
         try:
-            numeric_class_level = int(row['Class'])
+            numeric_class_level = int(class_level)
         except ValueError:
             return 0  # Return 0 for invalid class values
 
-        if syllabus in ['IGCSE', 'IB']:
+        if syllabus in ['igcse', 'ib']:
             if 1 <= numeric_class_level <= 4:
                 return hours * 120
             elif 5 <= numeric_class_level <= 7:
                 return hours * 150
             elif 8 <= numeric_class_level <= 10:
                 return hours * 170
-            elif 11 <= numeric_class_level <= 13:
+            elif 11 <= numeric_class_level <= 12:
                 return hours * 200
         else:
             if 1 <= numeric_class_level <= 4:
@@ -117,6 +119,7 @@ def calculate_salary(row):
                 return hours * 180
 
     return 0  # Default case if no condition matches
+# Default case if no condition matches
 # Default case if no condition matches
 
 # Function to manage data display and filtering for a specific worksheet
