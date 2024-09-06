@@ -74,7 +74,7 @@ def extract_first_letters(name):
         # Otherwise, take the first four letters of the first name
         return name_parts[0][:4].lower()
 
-# Salary calculation function
+# Salary calculation function (for overall salary)
 def calculate_salary(row):
     class_level = int(row['Class'])
     syllabus = row['Syllabus']
@@ -160,21 +160,17 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
-        # Highlight duplicate entries for teachers
-        filtered_data['is_duplicate'] = filtered_data.duplicated(subset=['Date', 'Class'], keep=False)
-        styled_data = filtered_data.style.apply(lambda x: ['background-color: yellow' if x.is_duplicate else '' for _ in x], axis=1)
-        st.dataframe(styled_data)
-
-        # Display total hours
-        total_hours = filtered_data["Hr"].sum()
-
-        # Calculate salary per class type, syllabus, etc.
+        # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
 
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+        # Grouping by Class, Syllabus, and Type of Class
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
+
         st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
-        st.write(filtered_data)
+        
+        # Show the filtered data with grouped salary report
+        st.write(salary_split)
 
 # Main function to handle user role selection and page display
 def main():
