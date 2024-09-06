@@ -76,6 +76,7 @@ def extract_first_letters(name):
 
 # Salary calculation function (for overall salary)
 # Salary calculation function (for overall salary)
+# Salary calculation function (for overall salary)
 def calculate_salary(row):
     class_level = row['Class'].strip()  # Strip to remove any leading/trailing spaces
     syllabus = row['Syllabus'].strip().lower()
