@@ -77,17 +77,29 @@ def extract_first_letters(name):
 # Salary calculation function (for overall salary)
 # Salary calculation function (for overall salary)
 # Salary calculation function (for overall salary)
+# Salary calculation function (for overall salary)
 def calculate_salary(row):
     class_level = row['Class'].strip()  # Strip to remove any leading/trailing spaces
     syllabus = row['Syllabus'].strip().lower()
     class_type = row['Type of class'].strip().lower()
     hours = row['Hr']
 
-    # Handle demo classes with '1-10' or '11-12'
+    # Map class ranges to a single representative class level
+    if "1-10" in class_level:
+        numeric_class_level = 10
+    elif "11-12" in class_level:
+        numeric_class_level = 12
+    else:
+        try:
+            numeric_class_level = int(class_level)
+        except ValueError:
+            return 0  # Return 0 for invalid class values
+
+    # Handle demo classes
     if "demo" in class_type:
-        if "1-10" in class_level:
+        if numeric_class_level <= 10:
             return hours * 150
-        elif "11-12" in class_level:
+        elif numeric_class_level >= 11:
             return hours * 180
 
     # Handle paid classes
@@ -96,11 +108,6 @@ def calculate_salary(row):
 
     # Handle regular, additional, exam types based on syllabus and class level
     else:
-        try:
-            numeric_class_level = int(class_level)
-        except ValueError:
-            return 0  # Return 0 for invalid class values
-
         if syllabus in ['igcse', 'ib']:
             if 1 <= numeric_class_level <= 4:
                 return hours * 120
@@ -119,6 +126,7 @@ def calculate_salary(row):
                 return hours * 180
 
     return 0  # Default case if no condition matches
+ # Default case if no condition matches
 # Default case if no condition matches
 # Default case if no condition matches
 
