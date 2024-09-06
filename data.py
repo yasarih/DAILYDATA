@@ -160,6 +160,9 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
+        st.subheader("Daily Class Data")
+        st.write(filtered_data)
+
         # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
@@ -167,9 +170,10 @@ def show_filtered_data(filtered_data, role):
         # Grouping by Class, Syllabus, and Type of Class
         salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
 
+        st.subheader("Salary Breakdown")
         st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
         
-        # Show the filtered data with grouped salary report
+        # Show the salary breakdown
         st.write(salary_split)
 
 # Main function to handle user role selection and page display
