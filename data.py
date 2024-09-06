@@ -75,8 +75,6 @@ def extract_first_letters(name):
         return name_parts[0][:4].lower()
 
 # Salary calculation function (for overall salary)
-# Salary calculation function (for overall salary)
-# Salary calculation function (for overall salary)
 def calculate_salary(row):
     class_level = row['Class'].strip()  # Strip to remove any leading/trailing spaces
     syllabus = row['Syllabus'].strip().lower()
@@ -114,7 +112,7 @@ def calculate_salary(row):
                 return hours * 150
             elif 8 <= numeric_class_level <= 10:
                 return hours * 170
-            elif 11 <= numeric_class_level <= 13:
+            elif 11 <= numeric_class_level <= 12:
                 return hours * 200
         else:
             if 1 <= numeric_class_level <= 4:
@@ -126,8 +124,6 @@ def calculate_salary(row):
 
     return 0  # Default case if no condition matches
 
-
-# Function to manage data display and filtering for a specific worksheet
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
