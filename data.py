@@ -65,14 +65,15 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
     return df
 
 # Function to calculate salary for teachers
+# Function to calculate salary for teachers
 def calculate_salary(row):
-    type_of_class = row['Type of class'].lower()
+    type_of_class = row['Type of class'].strip().lower()  # Use strip() to remove leading/trailing spaces
     board = row['Syllabus'].strip().lower()
     hours = row['Hr']
     class_level = int(row['Class'])
 
     # Regular, Additional, Exam classes
-    if type_of_class in ['regular', 'additional', 'exam']:
+    if "regular" in type_of_class or "additional" in type_of_class or "exam" in type_of_class:
         if board in ['igcse', 'ib']:
             if 1 <= class_level <= 4:
                 rate = 120
@@ -91,20 +92,21 @@ def calculate_salary(row):
                 rate = 180
 
     # Demo classes
-    elif type_of_class.startswith("demo"):
+    elif "demo" in type_of_class:
         if 1 <= class_level <= 10:
             rate = 150
         elif 11 <= class_level <= 12:
             rate = 180
 
     # Paid classes
-    elif type_of_class.startswith("paid"):
+    elif "paid" in type_of_class:
         return hours * 4 * 100  # Different calculation for paid classes
 
     else:
         return 0  # No salary for other types
 
     return rate * hours
+
 
 # Function to manage data display and filtering for a specific worksheet
 def manage_data(data, role):
