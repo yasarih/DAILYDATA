@@ -184,6 +184,9 @@ def show_filtered_data(filtered_data, role):
 
 # Main function to handle user role selection and page display
 def main():
+    # Adding the logo at the top of the app
+    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
+
     st.title("Angle Belearn: Your Daily Class Insights")
 
     # Sheet and headers details
