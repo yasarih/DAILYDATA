@@ -84,7 +84,7 @@ def calculate_salary(row):
     if "demo" in class_type:
         if  str(class_level) == 1-10:
             return hours * 150
-        elif str(class_level) == 11-12::
+        elif str(class_level) == 11-12:
             return hours * 180
 
     elif class_type.startswith("paid"):
