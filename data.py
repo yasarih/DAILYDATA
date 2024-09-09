@@ -125,28 +125,33 @@ def manage_data(data, role):
     if role == "Student":
         # Filter by Student ID and verify
         student_id = st.sidebar.text_input("Enter Student ID").strip().lower()
-        student_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
+        student_name_part = st.sidebar.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+
         if st.sidebar.button("Verify Student"):
             filtered_data = data[(data["MM"] == month) & 
-                                 (data["Student id"].str.lower() == student_id) & 
-                                 (data["Student"].str[:4].str.lower() == student_name_prefix)]
+                                 (data["Student id"].str.lower().str.strip() == student_id) & 
+                                 (data["Student"].str.lower().str.contains(student_name_part))]
+            
             if not filtered_data.empty:
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
-    
+
     elif role == "Teacher":
         # Filter by Teacher ID and verify
         teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
-        teacher_name_prefix = st.sidebar.text_input("Enter the first four letters of your name").strip().lower()
+        teacher_name_part = st.sidebar.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+
         if st.sidebar.button("Verify Teacher"):
             filtered_data = data[(data["MM"] == month) & 
-                                 (data["Teachers ID"].str.lower() == teacher_id) & 
-                                 (data["Teachers Name"].str[:4].str.lower() == teacher_name_prefix)]
+                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
+                                 (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+            
             if not filtered_data.empty:
                 show_filtered_data(filtered_data, role)
             else:
                 st.error("Verification failed. Please check your details.")
+
 
 def show_filtered_data(filtered_data, role):
     # Customize columns display based on role
