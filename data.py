@@ -5,6 +5,13 @@ import pandas as pd
 import numpy as np
 import json
 
+# Set page layout and title
+st.set_page_config(
+    page_title="Angle Belearn Insights",
+    page_icon="🎓",
+    layout="wide"
+)
+
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
@@ -37,32 +44,33 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
 
 # Function to fetch all data without caching to always get updated values
 def fetch_all_data(spreadsheet_name, worksheet_name):
-    sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
-    data = sheet.get_all_values()
+    with st.spinner("Fetching data..."):
+        sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
+        data = sheet.get_all_values()
 
-    if data and len(data) > 1:
-        headers = pd.Series(data[0])
-        headers = headers.fillna('').str.strip()
-        headers = headers.where(headers != '', other='Unnamed')
-        headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
+        if data and len(data) > 1:
+            headers = pd.Series(data[0])
+            headers = headers.fillna('').str.strip()
+            headers = headers.where(headers != '', other='Unnamed')
+            headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
-        df = pd.DataFrame(data[1:], columns=headers)
-        df.replace('', np.nan, inplace=True)
-        df.ffill(inplace=True)  # Use forward fill instead of deprecated method
+            df = pd.DataFrame(data[1:], columns=headers)
+            df.replace('', np.nan, inplace=True)
+            df.ffill(inplace=True)  # Use forward fill instead of deprecated method
 
-        for column in df.columns:
-            df[column] = df[column].astype(str).str.strip()
+            for column in df.columns:
+                df[column] = df[column].astype(str).str.strip()
 
-        numeric_cols = ['Hr']
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            numeric_cols = ['Hr']
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-    else:
-        st.warning("No data found or the sheet is incorrectly formatted.")
-        df = pd.DataFrame()
+        else:
+            st.warning("No data found or the sheet is incorrectly formatted.")
+            df = pd.DataFrame()
 
-    return df
+        return df
 
 # Function to extract the first few letters from the name
 def extract_first_letters(name):
@@ -123,38 +131,36 @@ def manage_data(data, role):
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     if role == "Student":
-        # Filter by Student ID and verify
-        student_id = st.sidebar.text_input("Enter Student ID").strip().lower()
-        student_name_part = st.sidebar.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+        with st.expander("Student Verification", expanded=True):
+            student_id = st.text_input("Enter Student ID").strip().lower()
+            student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-        if st.sidebar.button("Verify Student"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Student id"].str.lower().str.strip() == student_id) & 
-                                 (data["Student"].str.lower().str.contains(student_name_part))]
-            
-            if not filtered_data.empty:
-                show_filtered_data(filtered_data, role)
-            else:
-                st.error("Verification failed. Please check your details.")
+            if st.button("Verify Student"):
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Student id"].str.lower().str.strip() == student_id) & 
+                                     (data["Student"].str.lower().str.contains(student_name_part))]
+                
+                if not filtered_data.empty:
+                    show_filtered_data(filtered_data, role)
+                else:
+                    st.error("Verification failed. Please check your details.")
 
     elif role == "Teacher":
-        # Filter by Teacher ID and verify
-        teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
-        teacher_name_part = st.sidebar.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+        with st.expander("Teacher Verification", expanded=True):
+            teacher_id = st.text_input("Enter Teacher ID").strip().lower()
+            teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-        if st.sidebar.button("Verify Teacher"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                 (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-            
-            if not filtered_data.empty:
-                show_filtered_data(filtered_data, role)
-            else:
-                st.error("Verification failed. Please check your details.")
-
+            if st.button("Verify Teacher"):
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
+                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+                
+                if not filtered_data.empty:
+                    show_filtered_data(filtered_data, role)
+                else:
+                    st.error("Verification failed. Please check your details.")
 
 def show_filtered_data(filtered_data, role):
-    # Customize columns display based on role
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
@@ -164,7 +170,7 @@ def show_filtered_data(filtered_data, role):
         st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
         subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
         st.write("**Subject-wise Hours:**")
-        st.write(subject_hours)
+        st.bar_chart(subject_hours)
         st.write(filtered_data)
 
     elif role == "Teacher":
@@ -186,10 +192,10 @@ def show_filtered_data(filtered_data, role):
         
         # Show the salary breakdown
         st.write(salary_split)
+        st.bar_chart(salary_split.set_index('Class')['Salary'])
 
 # Main function to handle user role selection and page display
 def main():
-    # Adding the logo at the top of the app
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
 
     st.title("Angle Belearn: Your Daily Class Insights")
@@ -198,8 +204,7 @@ def main():
     spreadsheet_name = 'Student Daily Class Details 2024'
     worksheet_name = 'Student class details'
 
-    # Create a sidebar with role options
-    role = st.sidebar.selectbox("Select your role:", ["Select", "Student", "Teacher"])
+    role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
     if st.sidebar.button("Refresh Data"):
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
@@ -207,10 +212,10 @@ def main():
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
 
-    if role == "Student" or role == "Teacher":
+    if role != "Select":
         manage_data(st.session_state.data, role)
     else:
-        st.write("Please select a role from the sidebar.")
+        st.info("Please select a role from the sidebar.")
 
 if __name__ == "__main__":
     main()
