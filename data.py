@@ -170,6 +170,8 @@ def manage_data(data, role):
                                      (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
                 
                 if not filtered_data.empty:
+                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
                     show_filtered_data(filtered_data, role)
                 else:
                     st.error("Verification failed. Please check your details.")
@@ -225,11 +227,6 @@ def main():
     
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
-
-    if role == "Teacher":
-        # Display a welcome message for the teacher
-        teacher_name = "Mr. John Doe"  # Replace with actual teacher name after verification
-        welcome_teacher(teacher_name)
 
     if role != "Select":
         manage_data(st.session_state.data, role)
