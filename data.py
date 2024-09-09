@@ -124,6 +124,20 @@ def calculate_salary(row):
 
     return 0  # Default case if no condition matches
 
+# Function to display a welcome message for the teacher
+def welcome_teacher(teacher_name):
+    # Adding a large, bold, colorful welcome message with the teacher's name
+    st.markdown(f"""
+        <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
+            <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
+                👩‍🏫 Welcome, {teacher_name}!
+            </h1>
+            <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
+                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
@@ -211,6 +225,11 @@ def main():
     
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
+
+    if role == "Teacher":
+        # Display a welcome message for the teacher
+        teacher_name = "Mr. John Doe"  # Replace with actual teacher name after verification
+        welcome_teacher(teacher_name)
 
     if role != "Select":
         manage_data(st.session_state.data, role)
