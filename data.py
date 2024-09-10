@@ -48,26 +48,33 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
     with st.spinner("Fetching data..."):
         sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
         data = sheet.get_all_values()
+
         if data and len(data) > 1:
             headers = pd.Series(data[0])
             headers = headers.fillna('').str.strip()
             headers = headers.where(headers != '', other='Unnamed')
             headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
+
             df = pd.DataFrame(data[1:], columns=headers)
             df.replace('', np.nan, inplace=True)
             df.ffill(inplace=True)  # Use forward fill instead of deprecated method
+
             for column in df.columns:
                 df[column] = df[column].astype(str).str.strip()
+
             numeric_cols = ['Hr']
             for col in numeric_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
             # Ensure 'Date' is in a proper date format
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'], errors='coerce', format='%Y-%m-%d')
+
         else:
             st.warning("No data found or the sheet is incorrectly formatted.")
             df = pd.DataFrame()
+
         return df
 
 # Function to extract the first few letters from the name
@@ -86,17 +93,21 @@ def calculate_salary(row):
     syllabus = row['Syllabus'].strip().lower()
     class_type = row['Type of class'].strip().lower()
     hours = row['Hr']
+
     # Handle demo classes based on the 'Student id'
     if 'demo class i - x' in student_id:
         return hours * 150
     elif 'demo class xi - xii' in student_id:
         return hours * 180
+
     # Handle paid classes
     elif class_type.startswith("paid"):
         return hours * 4 * 100
+
     # Handle regular, additional, exam types based on syllabus and class level
     else:
         class_level = int(row['Class']) if row['Class'].isdigit() else None
+
         if syllabus in ['igcse', 'ib']:
             if class_level is not None:
                 if 1 <= class_level <= 4:
@@ -115,6 +126,7 @@ def calculate_salary(row):
                     return hours * 150
                 elif 11 <= class_level <= 12:
                     return hours * 180
+
     return 0  # Default case if no condition matches
 
 # Function to display a welcome message for the teacher
@@ -131,32 +143,14 @@ def welcome_teacher(teacher_name):
         </div>
     """, unsafe_allow_html=True)
 
-# Function to filter and manage data
 def manage_data(data, role):
     st.subheader(f"{role} Data")
-    
-    # Ensure the 'Date' column is in datetime format and handle missing dates
-    if 'Date' in data.columns:
-        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-    
-    # Remove rows with NaT in 'Date' column
-    data = data.dropna(subset=['Date'])
-
-    # Check if the 'Date' column is not empty after filtering NaT values
-    if not data.empty and 'Date' in data.columns:
-        date_min = data['Date'].min()  # Get the minimum date in the data
-        date_max = data['Date'].max()  # Get the maximum date in the data
-    else:
-        # If no valid dates are found, set default date values
-        st.error("No valid dates found in the dataset. Please check the data.")
-        return
 
     # Date range picker for filtering data by date
     st.sidebar.write("### Select Date Range:")
+    date_min = data['Date'].min()  # Get the minimum date in the data
+    date_max = data['Date'].max()  # Get the maximum date in the data
     date_range = st.sidebar.date_input("Select date range", [date_min, date_max], min_value=date_min, max_value=date_max)
-
-    # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
@@ -166,7 +160,6 @@ def manage_data(data, role):
             if st.button("Verify Student"):
                 filtered_data = data[(data['Date'] >= pd.to_datetime(date_range[0])) &
                                      (data['Date'] <= pd.to_datetime(date_range[1])) &
-                                     (data["MM"] == month) & 
                                      (data["Student id"].str.lower().str.strip() == student_id) & 
                                      (data["Student"].str.lower().str.contains(student_name_part))]
                 
@@ -183,10 +176,9 @@ def manage_data(data, role):
             if st.button("Verify Teacher"):
                 filtered_data = data[(data['Date'] >= pd.to_datetime(date_range[0])) &
                                      (data['Date'] <= pd.to_datetime(date_range[1])) &
-                                     (data["MM"] == month) & 
                                      (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
                                      (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-
+                
                 if not filtered_data.empty:
                     teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
                     welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
@@ -230,7 +222,7 @@ def show_filtered_data(filtered_data, role):
 
 # Main function to handle user role selection and page display
 def main():
-    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=270)
+    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
 
     st.title("Angle Belearn: Your Daily Class Insights")
 
