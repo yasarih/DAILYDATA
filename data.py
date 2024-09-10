@@ -4,7 +4,6 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime
 
 # Set page layout and title
 st.set_page_config(
@@ -66,10 +65,6 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
             for col in numeric_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
-            # Ensure 'Date' is in a proper date format
-            if 'Date' in df.columns:
-                df['Date'] = pd.to_datetime(df['Date'], errors='coerce', format='%Y-%m-%d')
 
         else:
             st.warning("No data found or the sheet is incorrectly formatted.")
@@ -146,11 +141,8 @@ def welcome_teacher(teacher_name):
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
-    # Date range picker for filtering data by date
-    st.sidebar.write("### Select Date Range:")
-    date_min = data['Date'].min()  # Get the minimum date in the data
-    date_max = data['Date'].max()  # Get the maximum date in the data
-    date_range = st.sidebar.date_input("Select date range", [date_min, date_max], min_value=date_min, max_value=date_max)
+    # Filter by month before verification
+    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
@@ -158,8 +150,7 @@ def manage_data(data, role):
             student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Student"):
-                filtered_data = data[(data['Date'] >= pd.to_datetime(date_range[0])) &
-                                     (data['Date'] <= pd.to_datetime(date_range[1])) &
+                filtered_data = data[(data["MM"] == month) & 
                                      (data["Student id"].str.lower().str.strip() == student_id) & 
                                      (data["Student"].str.lower().str.contains(student_name_part))]
                 
@@ -174,8 +165,7 @@ def manage_data(data, role):
             teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Teacher"):
-                filtered_data = data[(data['Date'] >= pd.to_datetime(date_range[0])) &
-                                     (data['Date'] <= pd.to_datetime(date_range[1])) &
+                filtered_data = data[(data["MM"] == month) & 
                                      (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
                                      (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
                 
