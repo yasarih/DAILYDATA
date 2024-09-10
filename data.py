@@ -135,15 +135,29 @@ def welcome_teacher(teacher_name):
 def manage_data(data, role):
     st.subheader(f"{role} Data")
     
+    # Ensure the 'Date' column is in datetime format and handle missing dates
+    if 'Date' in data.columns:
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+    
+    # Remove rows with NaT in 'Date' column
+    data = data.dropna(subset=['Date'])
+
+    # Check if the 'Date' column is not empty after filtering NaT values
+    if not data.empty and 'Date' in data.columns:
+        date_min = data['Date'].min()  # Get the minimum date in the data
+        date_max = data['Date'].max()  # Get the maximum date in the data
+    else:
+        # If no valid dates are found, set default date values
+        st.error("No valid dates found in the dataset. Please check the data.")
+        return
+
     # Date range picker for filtering data by date
     st.sidebar.write("### Select Date Range:")
-    date_min = data['Date'].min()  # Get the minimum date in the data
-    date_max = data['Date'].max()  # Get the maximum date in the data
     date_range = st.sidebar.date_input("Select date range", [date_min, date_max], min_value=date_min, max_value=date_max)
 
     # Filter by month before verification
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
-    
+
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
             student_id = st.text_input("Enter Student ID").strip().lower()
@@ -180,7 +194,6 @@ def manage_data(data, role):
                 else:
                     st.error("Verification failed. Please check your details.")
 
-# Function to display filtered data
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
