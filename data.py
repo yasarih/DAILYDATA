@@ -4,16 +4,20 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
 import json
+from datetime import datetime
+
 # Set page layout and title
 st.set_page_config(
     page_title="Angle Belearn Insights",
     page_icon="🎓",
     layout="wide"
 )
+
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
     return credentials_info
+
 # Function to connect to Google Sheets using the credentials from secrets for the new project
 def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     # Load the credentials from Streamlit secrets
@@ -38,6 +42,7 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     # Open the spreadsheet and access the specified worksheet
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
+
 # Function to fetch all data without caching to always get updated values
 def fetch_all_data(spreadsheet_name, worksheet_name):
     with st.spinner("Fetching data..."):
@@ -57,10 +62,14 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
             for col in numeric_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            # Ensure 'Date' is in a proper date format
+            if 'Date' in df.columns:
+                df['Date'] = pd.to_datetime(df['Date'], errors='coerce', format='%Y-%m-%d')
         else:
             st.warning("No data found or the sheet is incorrectly formatted.")
             df = pd.DataFrame()
         return df
+
 # Function to extract the first few letters from the name
 def extract_first_letters(name):
     name_parts = name.strip().split()  # Split the name by spaces
@@ -70,6 +79,7 @@ def extract_first_letters(name):
     else:
         # Otherwise, take the first four letters of the first name
         return name_parts[0][:4].lower()
+
 # Salary calculation function (for overall salary)
 def calculate_salary(row):
     student_id = row['Student id'].strip().lower()  # To identify the demo class using student ID
@@ -106,6 +116,7 @@ def calculate_salary(row):
                 elif 11 <= class_level <= 12:
                     return hours * 180
     return 0  # Default case if no condition matches
+
 # Function to display a welcome message for the teacher
 def welcome_teacher(teacher_name):
     # Adding a large, bold, colorful welcome message with the teacher's name
@@ -119,16 +130,29 @@ def welcome_teacher(teacher_name):
             </p>
         </div>
     """, unsafe_allow_html=True)
+
+# Function to filter and manage data
 def manage_data(data, role):
     st.subheader(f"{role} Data")
+    
+    # Date range picker for filtering data by date
+    st.sidebar.write("### Select Date Range:")
+    date_min = data['Date'].min()  # Get the minimum date in the data
+    date_max = data['Date'].max()  # Get the maximum date in the data
+    date_range = st.sidebar.date_input("Select date range", [date_min, date_max], min_value=date_min, max_value=date_max)
+
     # Filter by month before verification
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+    
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
             student_id = st.text_input("Enter Student ID").strip().lower()
             student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+
             if st.button("Verify Student"):
-                filtered_data = data[(data["MM"] == month) & 
+                filtered_data = data[(data['Date'] >= pd.to_datetime(date_range[0])) &
+                                     (data['Date'] <= pd.to_datetime(date_range[1])) &
+                                     (data["MM"] == month) & 
                                      (data["Student id"].str.lower().str.strip() == student_id) & 
                                      (data["Student"].str.lower().str.contains(student_name_part))]
                 
@@ -136,12 +160,16 @@ def manage_data(data, role):
                     show_filtered_data(filtered_data, role)
                 else:
                     st.error("Verification failed. Please check your details.")
+
     elif role == "Teacher":
         with st.expander("Teacher Verification", expanded=True):
             teacher_id = st.text_input("Enter Teacher ID").strip().lower()
             teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+
             if st.button("Verify Teacher"):
-                filtered_data = data[(data["MM"] == month) & 
+                filtered_data = data[(data['Date'] >= pd.to_datetime(date_range[0])) &
+                                     (data['Date'] <= pd.to_datetime(date_range[1])) &
+                                     (data["MM"] == month) & 
                                      (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
                                      (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
 
@@ -151,18 +179,64 @@ def manage_data(data, role):
                     show_filtered_data(filtered_data, role)
                 else:
                     st.error("Verification failed. Please check your details.")
-@@ -226,11 +228,6 @@ def main():
+
+# Function to display filtered data
+def show_filtered_data(filtered_data, role):
+    if role == "Student":
+        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+
+        # Display total hours and subject-wise breakdown
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+        st.write("**Subject-wise Hours:**")
+        st.bar_chart(subject_hours)
+        st.write(filtered_data)
+
+    elif role == "Teacher":
+        filtered_data = filtered_data[["Date","Student id","Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+
+        st.subheader("Daily Class Data")
+        st.write(filtered_data)
+
+        # Calculate salary for total hours based on conditions
+        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['Salary'].sum()
+
+        # Grouping by Class, Syllabus, and Type of Class
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
+
+        st.subheader("Salary Breakdown")
+        st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
+        
+        # Show the salary breakdown
+        st.write(salary_split)
+        st.bar_chart(salary_split.set_index('Class')['Salary'])
+
+# Main function to handle user role selection and page display
+def main():
+    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=270)
+
+    st.title("Angle Belearn: Your Daily Class Insights")
+
+    # Sheet and headers details
+    spreadsheet_name = 'Student Daily Class Details 2024'
+    worksheet_name = 'Student class details'
+
+    role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
+
+    if st.sidebar.button("Refresh Data"):
+        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
+    
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
-
-    if role == "Teacher":
-        # Display a welcome message for the teacher
-        teacher_name = "Mr. John Doe"  # Replace with actual teacher name after verification
-        welcome_teacher(teacher_name)
 
     if role != "Select":
         manage_data(st.session_state.data, role)
     else:
         st.info("Please select a role from the sidebar.")
+
 if __name__ == "__main__":
     main()
