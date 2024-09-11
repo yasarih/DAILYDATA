@@ -43,7 +43,6 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
-# Function to fetch all data without caching to always get updated values
 def fetch_all_data(spreadsheet_name, worksheet_name):
     with st.spinner("Fetching data..."):
         sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
@@ -65,8 +64,11 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
             df.replace('', np.nan, inplace=True)
             df.dropna(how='all', inplace=True)
 
-            # Convert 'Date' column to datetime format
+            # Convert 'Date' column to datetime format and handle invalid dates
             df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
+
+            # Drop rows where 'Date' could not be parsed (i.e., where 'Date' is NaT)
+            df.dropna(subset=["Date"], inplace=True)
 
             numeric_cols = ['Hr']
             for col in numeric_cols:
@@ -79,7 +81,6 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         return df
 
-# Function to highlight duplicate rows with yellow background
 def highlight_duplicates(df):
     # Identify duplicate rows
     is_duplicate = df.duplicated(keep=False)
