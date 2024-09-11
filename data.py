@@ -89,45 +89,62 @@ def highlight_duplicates(df):
     # Define the style for the duplicate rows
     return ['background-color: yellow' if is_duplicate.iloc[i] else '' for i in range(len(df))]
 
-# Function to display a welcome message for the teacher
-def welcome_teacher(teacher_name):
-    st.markdown(f"""
-        <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
-            <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
-                👩‍🏫 Welcome, {teacher_name}!
-            </h1>
-            <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
-                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+# Teacher verification function
+def verify_teacher(data, teacher_id, teacher_name_part):
+    # Convert teacher's ID and name to lowercase for case-insensitive comparison
+    teacher_id = teacher_id.lower().strip()
+    teacher_name_part = teacher_name_part.lower().strip()
+
+    # Filter data to find matching Teacher ID and Name Part
+    matching_data = data[(data["Teachers ID"].str.lower().str.strip() == teacher_id) &
+                         (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+    
+    if not matching_data.empty:
+        return True, matching_data
+    else:
+        return False, None
 
 # Main function to manage data filtering and UI
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
-    # Get today's date
-    today = datetime.today()
+    if role == "Teacher":
+        # Teacher ID and Name input for verification
+        teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
+        teacher_name_part = st.sidebar.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-    # Generate month-year options for the past 12 months
-    months = pd.date_range(end=today, periods=12, freq='MS').strftime("%B %Y").tolist()
+        if st.sidebar.button("Verify Teacher"):
+            is_verified, teacher_data = verify_teacher(data, teacher_id, teacher_name_part)
 
-    # Select Month (dropdown)
-    selected_month = st.sidebar.selectbox("Select Month", months)
+            if is_verified:
+                teacher_name = teacher_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                st.success(f"Welcome {teacher_name}!")
 
-    # Convert selected month back to a datetime object (1st of the selected month)
-    start_date = pd.to_datetime(selected_month, format='%B %Y')
+                # Get today's date
+                today = datetime.today()
 
-    # Date range: From 1st of selected month to today's date
-    end_date = today
+                # Generate month-year options for the past 12 months
+                months = pd.date_range(end=today, periods=12, freq='MS').strftime("%B %Y").tolist()
 
-    # Filter the data by the selected date range
-    filtered_data = data[(data["Date"] >= start_date) & (data["Date"] <= end_date)]
+                # Select Month (dropdown)
+                selected_month = st.sidebar.selectbox("Select Month", months)
 
-    st.write(f"Displaying data from {start_date.date()} to {end_date.date()}")
+                # Convert selected month back to a datetime object (1st of the selected month)
+                start_date = pd.to_datetime(selected_month, format='%B %Y')
 
-    # Highlight duplicate entries with a yellow background
-    st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
+                # Date range: From 1st of selected month to today's date
+                end_date = today
+
+                # Filter the data by the selected date range
+                filtered_data = teacher_data[(teacher_data["Date"] >= start_date) & (teacher_data["Date"] <= end_date)]
+
+                st.write(f"Displaying data from {start_date.date()} to {end_date.date()}")
+
+                # Highlight duplicate entries with a yellow background
+                st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
+
+            else:
+                st.error("Verification failed. Please check your Teacher ID and Name.")
 
 # Main function to handle user role selection and page display
 def main():
@@ -147,10 +164,10 @@ def main():
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
 
-    if role != "Select":
+    if role == "Teacher":
         manage_data(st.session_state.data, role)
     else:
-        st.info("Please select a role from the sidebar.")
+        st.info("Please select 'Teacher' to proceed.")
 
 if __name__ == "__main__":
     main()
