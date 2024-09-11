@@ -4,6 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
 import json
+from datetime import datetime
 
 # Set page layout and title
 st.set_page_config(
@@ -55,11 +56,17 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
             headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
             df = pd.DataFrame(data[1:], columns=headers)
-            df.replace('', np.nan, inplace=True)
-            df.ffill(inplace=True)  # Use forward fill instead of deprecated method
 
+            # Strip any extra spaces from all columns
             for column in df.columns:
                 df[column] = df[column].astype(str).str.strip()
+
+            # Remove fully blank rows
+            df.replace('', np.nan, inplace=True)
+            df.dropna(how='all', inplace=True)
+
+            # Convert 'Date' column to datetime format
+            df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
 
             numeric_cols = ['Hr']
             for col in numeric_cols:
@@ -72,15 +79,13 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         return df
 
-# Function to extract the first few letters from the name
-def extract_first_letters(name):
-    name_parts = name.strip().split()  # Split the name by spaces
-    if len(name_parts) >= 2:
-        # If there are two parts (first name and last name), take first three letters of first name and first letter of last name
-        return (name_parts[0][:3] + name_parts[1][0]).lower()
-    else:
-        # Otherwise, take the first four letters of the first name
-        return name_parts[0][:4].lower()
+# Function to highlight duplicate rows with yellow background
+def highlight_duplicates(df):
+    # Identify duplicate rows
+    is_duplicate = df.duplicated(keep=False)
+
+    # Define the style for the duplicate rows
+    return ['background-color: yellow' if is_duplicate.iloc[i] else '' for i in range(len(df))]
 
 # Salary calculation function (for overall salary)
 def calculate_salary(row):
@@ -126,7 +131,6 @@ def calculate_salary(row):
 
 # Function to display a welcome message for the teacher
 def welcome_teacher(teacher_name):
-    # Adding a large, bold, colorful welcome message with the teacher's name
     st.markdown(f"""
         <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
             <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
@@ -143,6 +147,16 @@ def manage_data(data, role):
 
     # Filter by month before verification
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+
+    # **Add Date Range Picker**
+    min_date = data["Date"].min()  # Get the earliest date in the dataset
+    max_date = data["Date"].max()  # Get the latest date in the dataset
+    date_range = st.sidebar.date_input("Select Date Range", [min_date, max_date])
+
+    if date_range and len(date_range) == 2:
+        start_date, end_date = date_range  # Unpack the date range
+        # Filter the data by selected date range
+        data = data[(data["Date"] >= pd.to_datetime(start_date)) & (data["Date"] <= pd.to_datetime(end_date))]
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
@@ -187,14 +201,17 @@ def show_filtered_data(filtered_data, role):
         subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
         st.write("**Subject-wise Hours:**")
         st.bar_chart(subject_hours)
-        st.write(filtered_data)
+        
+        # Highlight duplicate entries with a yellow background
+        st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
 
     elif role == "Teacher":
         filtered_data = filtered_data[["Date","Student id","Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
         st.subheader("Daily Class Data")
-        st.write(filtered_data)
+        # Highlight duplicate entries with a yellow background
+        st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
 
         # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
