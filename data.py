@@ -3,7 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
-import json
+from datetime import datetime
 
 # Set page layout and title
 st.set_page_config(
@@ -55,11 +55,20 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
             headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
             df = pd.DataFrame(data[1:], columns=headers)
-            df.replace('', np.nan, inplace=True)
-            df.ffill(inplace=True)  # Use forward fill instead of deprecated method
 
+            # Strip any extra spaces from all columns
             for column in df.columns:
                 df[column] = df[column].astype(str).str.strip()
+
+            # Remove fully blank rows
+            df.replace('', np.nan, inplace=True)
+            df.dropna(how='all', inplace=True)
+
+            # Convert 'Date' column to datetime format and handle invalid dates
+            df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
+
+            # Drop rows where 'Date' could not be parsed (i.e., where 'Date' is NaT)
+            df.dropna(subset=["Date"], inplace=True)
 
             numeric_cols = ['Hr']
             for col in numeric_cols:
@@ -72,143 +81,70 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         return df
 
-# Function to extract the first few letters from the name
-def extract_first_letters(name):
-    name_parts = name.strip().split()  # Split the name by spaces
-    if len(name_parts) >= 2:
-        # If there are two parts (first name and last name), take first three letters of first name and first letter of last name
-        return (name_parts[0][:3] + name_parts[1][0]).lower()
+# Function to highlight duplicate rows with yellow background
+def highlight_duplicates(df):
+    # Identify duplicate rows
+    is_duplicate = df.duplicated(keep=False)
+
+    # Define the style for the duplicate rows
+    return ['background-color: yellow' if is_duplicate.iloc[i] else '' for i in range(len(df))]
+
+# Teacher verification function
+def verify_teacher(data, teacher_id, teacher_name_part):
+    # Convert teacher's ID and name to lowercase for case-insensitive comparison
+    teacher_id = teacher_id.lower().strip()
+    teacher_name_part = teacher_name_part.lower().strip()
+
+    # Filter data to find matching Teacher ID and Name Part
+    matching_data = data[(data["Teachers ID"].str.lower().str.strip() == teacher_id) &
+                         (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+
+    if not matching_data.empty:
+        return True, matching_data
     else:
-        # Otherwise, take the first four letters of the first name
-        return name_parts[0][:4].lower()
+        return False, None
 
-# Salary calculation function (for overall salary)
-def calculate_salary(row):
-    student_id = row['Student id'].strip().lower()  # To identify the demo class using student ID
-    syllabus = row['Syllabus'].strip().lower()
-    class_type = row['Type of class'].strip().lower()
-    hours = row['Hr']
-
-    # Handle demo classes based on the 'Student id'
-    if 'demo class i - x' in student_id:
-        return hours * 150
-    elif 'demo class xi - xii' in student_id:
-        return hours * 180
-
-    # Handle paid classes
-    elif class_type.startswith("paid"):
-        return hours * 4 * 100
-
-    # Handle regular, additional, exam types based on syllabus and class level
-    else:
-        class_level = int(row['Class']) if row['Class'].isdigit() else None
-
-        if syllabus in ['igcse', 'ib']:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * 120
-                elif 5 <= class_level <= 7:
-                    return hours * 150
-                elif 8 <= class_level <= 10:
-                    return hours * 170
-                elif 11 <= class_level <= 13:
-                    return hours * 200
-        else:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * 120
-                elif 5 <= class_level <= 10:
-                    return hours * 150
-                elif 11 <= class_level <= 12:
-                    return hours * 180
-
-    return 0  # Default case if no condition matches
-
-# Function to display a welcome message for the teacher
-def welcome_teacher(teacher_name):
-    # Adding a large, bold, colorful welcome message with the teacher's name
-    st.markdown(f"""
-        <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
-            <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
-                👩‍🏫 Welcome, {teacher_name}!
-            </h1>
-            <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
-                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-
+# Main function to manage data filtering and UI
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
-    # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+    if role == "Teacher":
+        # Teacher ID and Name input for verification
+        teacher_id = st.sidebar.text_input("Enter Teacher ID").strip().lower()
+        teacher_name_part = st.sidebar.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-    if role == "Student":
-        with st.expander("Student Verification", expanded=True):
-            student_id = st.text_input("Enter Student ID").strip().lower()
-            student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+        if st.sidebar.button("Verify Teacher"):
+            is_verified, teacher_data = verify_teacher(data, teacher_id, teacher_name_part)
 
-            if st.button("Verify Student"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Student id"].str.lower().str.strip() == student_id) & 
-                                     (data["Student"].str.lower().str.contains(student_name_part))]
-                
-                if not filtered_data.empty:
-                    show_filtered_data(filtered_data, role)
-                else:
-                    st.error("Verification failed. Please check your details.")
+            if is_verified:
+                teacher_name = teacher_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                st.success(f"Welcome {teacher_name}!")
 
-    elif role == "Teacher":
-        with st.expander("Teacher Verification", expanded=True):
-            teacher_id = st.text_input("Enter Teacher ID").strip().lower()
-            teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+                # Get today's date
+                today = datetime.today()
 
-            if st.button("Verify Teacher"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-                
-                if not filtered_data.empty:
-                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
-                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
-                    show_filtered_data(filtered_data, role)
-                else:
-                    st.error("Verification failed. Please check your details.")
+                # Generate month-year options for the past 12 months
+                months = pd.date_range(end=today, periods=12, freq='MS').strftime("%B %Y").tolist()
 
-def show_filtered_data(filtered_data, role):
-    if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+                # Select Month (dropdown)
+                selected_month = st.sidebar.selectbox("Select Month", months)
 
-        # Display total hours and subject-wise breakdown
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Subject-wise Hours:**")
-        st.bar_chart(subject_hours)
-        st.write(filtered_data)
+                # Convert selected month back to a datetime object (1st of the selected month)
+                start_date = pd.to_datetime(selected_month, format='%B %Y')
 
-    elif role == "Teacher":
-        filtered_data = filtered_data[["Date","Student id","Student", "Class", "Syllabus", "Type of class", "Hr"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+                # Date range: From 1st of selected month to today's date
+                end_date = today
 
-        st.subheader("Daily Class Data")
-        st.write(filtered_data)
+                # Filter the data by the selected date range
+                filtered_data = teacher_data[(teacher_data["Date"] >= start_date) & (teacher_data["Date"] <= end_date)]
 
-        # Calculate salary for total hours based on conditions
-        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
-        total_salary = filtered_data['Salary'].sum()
+                st.write(f"Displaying data from {start_date.date()} to {end_date.date()}")
 
-        # Grouping by Class, Syllabus, and Type of Class
-        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
+                # Highlight duplicate entries with a yellow background
+                st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
 
-        st.subheader("Salary Breakdown")
-        st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
-        
-        # Show the salary breakdown
-        st.write(salary_split)
-        st.bar_chart(salary_split.set_index('Class')['Salary'])
+            else:
+                st.error("Verification failed. Please check your Teacher ID and Name.")
 
 # Main function to handle user role selection and page display
 def main():
@@ -228,10 +164,10 @@ def main():
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
 
-    if role != "Select":
+    if role == "Teacher":
         manage_data(st.session_state.data, role)
     else:
-        st.info("Please select a role from the sidebar.")
+        st.info("Please select 'Teacher' to proceed.")
 
 if __name__ == "__main__":
     main()
