@@ -150,46 +150,28 @@ def manage_data(data, role):
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     # **Add Date Range Picker**
-    min_date = data["Date"].min()  # Get the earliest date in the dataset
-    max_date = data["Date"].max()  # Get the latest date in the dataset
-    date_range = st.sidebar.date_input("Select Date Range", [min_date, max_date])
+    # Ensure that min_date and max_date are valid
+    if not data["Date"].isnull().all():  # Check if there's any valid date in the column
+        min_date = data["Date"].min().date()  # Get the earliest date in the dataset
+        max_date = data["Date"].max().date()  # Get the latest date in the dataset
+    else:
+        # Fallback to today's date if no valid dates are present
+        min_date = datetime.today().date()
+        max_date = datetime.today().date()
+
+    # Safely handle invalid date ranges
+    if min_date and max_date:
+        date_range = st.sidebar.date_input("Select Date Range", [min_date, max_date])
+    else:
+        st.error("No valid dates available in the dataset.")
 
     if date_range and len(date_range) == 2:
         start_date, end_date = date_range  # Unpack the date range
         # Filter the data by selected date range
         data = data[(data["Date"] >= pd.to_datetime(start_date)) & (data["Date"] <= pd.to_datetime(end_date))]
 
-    if role == "Student":
-        with st.expander("Student Verification", expanded=True):
-            student_id = st.text_input("Enter Student ID").strip().lower()
-            student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+    # The rest of the code...
 
-            if st.button("Verify Student"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Student id"].str.lower().str.strip() == student_id) & 
-                                     (data["Student"].str.lower().str.contains(student_name_part))]
-                
-                if not filtered_data.empty:
-                    show_filtered_data(filtered_data, role)
-                else:
-                    st.error("Verification failed. Please check your details.")
-
-    elif role == "Teacher":
-        with st.expander("Teacher Verification", expanded=True):
-            teacher_id = st.text_input("Enter Teacher ID").strip().lower()
-            teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
-
-            if st.button("Verify Teacher"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-                
-                if not filtered_data.empty:
-                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
-                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
-                    show_filtered_data(filtered_data, role)
-                else:
-                    st.error("Verification failed. Please check your details.")
 
 def show_filtered_data(filtered_data, role):
     if role == "Student":
