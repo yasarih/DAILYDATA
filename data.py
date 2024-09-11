@@ -3,7 +3,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
-import json
 from datetime import datetime
 
 # Set page layout and title
@@ -43,6 +42,7 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
+# Function to fetch all data without caching to always get updated values
 def fetch_all_data(spreadsheet_name, worksheet_name):
     with st.spinner("Fetching data..."):
         sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
@@ -81,54 +81,13 @@ def fetch_all_data(spreadsheet_name, worksheet_name):
 
         return df
 
+# Function to highlight duplicate rows with yellow background
 def highlight_duplicates(df):
     # Identify duplicate rows
     is_duplicate = df.duplicated(keep=False)
 
     # Define the style for the duplicate rows
     return ['background-color: yellow' if is_duplicate.iloc[i] else '' for i in range(len(df))]
-
-# Salary calculation function (for overall salary)
-def calculate_salary(row):
-    student_id = row['Student id'].strip().lower()  # To identify the demo class using student ID
-    syllabus = row['Syllabus'].strip().lower()
-    class_type = row['Type of class'].strip().lower()
-    hours = row['Hr']
-
-    # Handle demo classes based on the 'Student id'
-    if 'demo class i - x' in student_id:
-        return hours * 150
-    elif 'demo class xi - xii' in student_id:
-        return hours * 180
-
-    # Handle paid classes
-    elif class_type.startswith("paid"):
-        return hours * 4 * 100
-
-    # Handle regular, additional, exam types based on syllabus and class level
-    else:
-        class_level = int(row['Class']) if row['Class'].isdigit() else None
-
-        if syllabus in ['igcse', 'ib']:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * 120
-                elif 5 <= class_level <= 7:
-                    return hours * 150
-                elif 8 <= class_level <= 10:
-                    return hours * 170
-                elif 11 <= class_level <= 13:
-                    return hours * 200
-        else:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * 120
-                elif 5 <= class_level <= 10:
-                    return hours * 150
-                elif 11 <= class_level <= 12:
-                    return hours * 180
-
-    return 0  # Default case if no condition matches
 
 # Function to display a welcome message for the teacher
 def welcome_teacher(teacher_name):
@@ -143,72 +102,32 @@ def welcome_teacher(teacher_name):
         </div>
     """, unsafe_allow_html=True)
 
+# Main function to manage data filtering and UI
 def manage_data(data, role):
     st.subheader(f"{role} Data")
 
-    # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+    # Get today's date
+    today = datetime.today()
 
-    # **Add Date Range Picker**
-    # Ensure that min_date and max_date are valid
-    if not data["Date"].isnull().all():  # Check if there's any valid date in the column
-        min_date = data["Date"].min().date()  # Get the earliest date in the dataset
-        max_date = data["Date"].max().date()  # Get the latest date in the dataset
-    else:
-        # Fallback to today's date if no valid dates are present
-        min_date = datetime.today().date()
-        max_date = datetime.today().date()
+    # Generate month-year options for the past 12 months
+    months = pd.date_range(end=today, periods=12, freq='MS').strftime("%B %Y").tolist()
 
-    # Safely handle invalid date ranges
-    if min_date and max_date:
-        date_range = st.sidebar.date_input("Select Date Range", [min_date, max_date])
-    else:
-        st.error("No valid dates available in the dataset.")
+    # Select Month (dropdown)
+    selected_month = st.sidebar.selectbox("Select Month", months)
 
-    if date_range and len(date_range) == 2:
-        start_date, end_date = date_range  # Unpack the date range
-        # Filter the data by selected date range
-        data = data[(data["Date"] >= pd.to_datetime(start_date)) & (data["Date"] <= pd.to_datetime(end_date))]
+    # Convert selected month back to a datetime object (1st of the selected month)
+    start_date = pd.to_datetime(selected_month, format='%B %Y')
 
-    # The rest of the code...
+    # Date range: From 1st of selected month to today's date
+    end_date = today
 
+    # Filter the data by the selected date range
+    filtered_data = data[(data["Date"] >= start_date) & (data["Date"] <= end_date)]
 
-def show_filtered_data(filtered_data, role):
-    if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+    st.write(f"Displaying data from {start_date.date()} to {end_date.date()}")
 
-        # Display total hours and subject-wise breakdown
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Subject-wise Hours:**")
-        st.bar_chart(subject_hours)
-        
-        # Highlight duplicate entries with a yellow background
-        st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
-
-    elif role == "Teacher":
-        filtered_data = filtered_data[["Date","Student id","Student", "Class", "Syllabus", "Type of class", "Hr"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
-
-        st.subheader("Daily Class Data")
-        # Highlight duplicate entries with a yellow background
-        st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
-
-        # Calculate salary for total hours based on conditions
-        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
-        total_salary = filtered_data['Salary'].sum()
-
-        # Grouping by Class, Syllabus, and Type of Class
-        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
-
-        st.subheader("Salary Breakdown")
-        st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
-        
-        # Show the salary breakdown
-        st.write(salary_split)
-        st.bar_chart(salary_split.set_index('Class')['Salary'])
+    # Highlight duplicate entries with a yellow background
+    st.dataframe(filtered_data.style.apply(highlight_duplicates, axis=1))
 
 # Main function to handle user role selection and page display
 def main():
