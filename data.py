@@ -139,13 +139,15 @@ def welcome_teacher(teacher_name):
     """, unsafe_allow_html=True)
 
 # Function to highlight rows where a student has more than one entry for the same day
+# Function to highlight rows where a student has more than one entry for the same day
 def highlight_multiple_entries(df):
     # Create a mask that identifies rows where a student has more than one entry for the same date
     is_duplicate = df.duplicated(subset=["Student id", "Date"], keep=False)
-    # Apply a yellow background to duplicate rows
-    return ['background-color: yellow' if v else '' for v in is_duplicate]
+    # Add the 'is_duplicate' column to use in styling
+    df['is_duplicate'] = is_duplicate
+    return df
 
-# Function to display filtered data based on the role (Student or Teacher)
+# Updated function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
@@ -166,9 +168,14 @@ def show_filtered_data(filtered_data, role):
         st.subheader("Daily Class Data")
         
         # Highlight rows with more than one entry for the same student on the same day
-        styled_df = filtered_data.style.apply(highlight_multiple_entries, axis=1)
-        st.write(styled_df, unsafe_allow_html=True)  # Display styled DataFrame
+        filtered_data = highlight_multiple_entries(filtered_data)  # Pre-process the DataFrame to mark duplicates
 
+        def apply_highlight(row):
+            return ['background-color: yellow'] * len(row) if row['is_duplicate'] else [''] * len(row)
+
+        styled_df = filtered_data.style.apply(apply_highlight, axis=1)
+        st.dataframe(styled_df)  # Display styled DataFrame without unsafe_allow_html
+        
         # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
@@ -186,6 +193,10 @@ def show_filtered_data(filtered_data, role):
         # Show the salary breakdown
         st.write(salary_split)
         st.bar_chart(salary_split.set_index('Class')['Salary'])
+
+# No other changes are needed for the rest of the code
+
+
 
 # Main function to handle user role selection and page display
 def main():
