@@ -176,6 +176,13 @@ def manage_data(data, role):
                 else:
                     st.error("Verification failed. Please check your details.")
 
+# Function to highlight rows where a student has more than one entry for the same day
+def highlight_multiple_entries(df):
+    # Create a mask that identifies rows where a student has more than one entry for the same date
+    is_duplicate = df.duplicated(subset=["Student id", "Date"], keep=False)
+    # Apply a yellow background to duplicate rows
+    return ['background-color: yellow' if v else '' for v in is_duplicate]
+
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
@@ -190,25 +197,33 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date","Student id","Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data = filtered_data[["Date", "Student id", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
         st.subheader("Daily Class Data")
-        st.write(filtered_data)
+        
+        # Highlight rows with more than one entry for the same student on the same day
+        styled_df = filtered_data.style.apply(highlight_multiple_entries, axis=1)
+        st.write(styled_df, unsafe_allow_html=True)  # Display styled DataFrame
 
         # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
 
+        # Calculate total hours as well
+        total_hours = filtered_data['Hr'].sum()
+
         # Grouping by Class, Syllabus, and Type of Class
         salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
 
         st.subheader("Salary Breakdown")
+        st.write(f"**Total Hours till last update: {total_hours:.2f} hours**")
         st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
         
         # Show the salary breakdown
         st.write(salary_split)
-        st.bar_chart(salary_split.set_index('Class')['Salary'])
+        
+
 
 # Main function to handle user role selection and page display
 def main():
