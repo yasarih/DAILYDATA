@@ -138,44 +138,6 @@ def welcome_teacher(teacher_name):
         </div>
     """, unsafe_allow_html=True)
 
-def manage_data(data, role):
-    st.subheader(f"{role} Data")
-
-    # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
-
-    if role == "Student":
-        with st.expander("Student Verification", expanded=True):
-            student_id = st.text_input("Enter Student ID").strip().lower()
-            student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
-
-            if st.button("Verify Student"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Student id"].str.lower().str.strip() == student_id) & 
-                                     (data["Student"].str.lower().str.contains(student_name_part))]
-                
-                if not filtered_data.empty:
-                    show_filtered_data(filtered_data, role)
-                else:
-                    st.error("Verification failed. Please check your details.")
-
-    elif role == "Teacher":
-        with st.expander("Teacher Verification", expanded=True):
-            teacher_id = st.text_input("Enter Teacher ID").strip().lower()
-            teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
-
-            if st.button("Verify Teacher"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-                
-                if not filtered_data.empty:
-                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
-                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
-                    show_filtered_data(filtered_data, role)
-                else:
-                    st.error("Verification failed. Please check your details.")
-
 # Function to highlight rows where a student has more than one entry for the same day
 def highlight_multiple_entries(df):
     # Create a mask that identifies rows where a student has more than one entry for the same date
@@ -183,6 +145,7 @@ def highlight_multiple_entries(df):
     # Apply a yellow background to duplicate rows
     return ['background-color: yellow' if v else '' for v in is_duplicate]
 
+# Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
@@ -222,8 +185,7 @@ def show_filtered_data(filtered_data, role):
         
         # Show the salary breakdown
         st.write(salary_split)
-        
-
+        st.bar_chart(salary_split.set_index('Class')['Salary'])
 
 # Main function to handle user role selection and page display
 def main():
@@ -247,6 +209,44 @@ def main():
         manage_data(st.session_state.data, role)
     else:
         st.info("Please select a role from the sidebar.")
+
+def manage_data(data, role):
+    st.subheader(f"{role} Data")
+
+    # Filter by month before verification
+    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+
+    if role == "Student":
+        with st.expander("Student Verification", expanded=True):
+            student_id = st.text_input("Enter Student ID").strip().lower()
+            student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+
+            if st.button("Verify Student"):
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Student id"].str.lower().str.strip() == student_id) & 
+                                     (data["Student"].str.lower().str.contains(student_name_part))]
+                
+                if not filtered_data.empty:
+                    show_filtered_data(filtered_data, role)
+                else:
+                    st.error("Verification failed. Please check your details.")
+
+    elif role == "Teacher":
+        with st.expander("Teacher Verification", expanded=True):
+            teacher_id = st.text_input("Enter Teacher ID").strip().lower()
+            teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+
+            if st.button("Verify Teacher"):
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
+                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+                
+                if not filtered_data.empty:
+                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
+                    show_filtered_data(filtered_data, role)
+                else:
+                    st.error("Verification failed. Please check your details.")
 
 if __name__ == "__main__":
     main()
