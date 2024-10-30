@@ -53,9 +53,9 @@ def fetch_data_from_sheet_by_link(sheet_link, worksheet_name):
 
 # Load data from main sheet, EM list sheet, and weekly timetable sheet
 def load_all_data():
-    main_data = fetch_data_from_sheet_by_link("https://docs.google.com/spreadsheets/d/17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y/edit?gid=148340814#gid=148340814", "Student class details")
-    em_data = fetch_data_from_sheet_by_link("https://docs.google.com/spreadsheets/d/17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y/edit?gid=1682193003#gid=1682193003", "Student Data")
-    timetable_data = fetch_data_from_sheet_by_link("https://docs.google.com/spreadsheets/d/1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU/edit?gid=1473623416#gid=1473623416", "Console")
+    main_data = fetch_data_from_sheet_by_link("LINK_TO_MAIN_SHEET", "Student class details")
+    em_data = fetch_data_from_sheet_by_link("LINK_TO_EM_SHEET", "EM List")
+    timetable_data = fetch_data_from_sheet_by_link("LINK_TO_TIMETABLE_SHEET", "Weekly Timetable")
     
     # Save to session state to avoid redundant loading
     st.session_state.main_data = main_data
@@ -89,23 +89,33 @@ def display_weekly_timetable(teacher_name, timetable_data):
         else:
             st.dataframe(day_schedule)
 
+# Function to safely check and filter data based on column existence
+def check_and_filter_columns(df, required_columns):
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        st.warning(f"Missing columns: {', '.join(missing_columns)}. Data may be incomplete.")
+    # Filter only the columns that are present
+    return df[[col for col in required_columns if col in df.columns]]
+
 # Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role, teacher_name=None):
     if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
-
-        # Display total hours and subject-wise breakdown
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Subject-wise Hours:**")
-        st.bar_chart(subject_hours)
+        required_columns = ["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]
+        filtered_data = check_and_filter_columns(filtered_data, required_columns)
+        
+        # Display total hours and subject-wise breakdown if data is available
+        if "Hr" in filtered_data.columns:
+            total_hours = filtered_data["Hr"].sum()
+            st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+            if "Subject" in filtered_data.columns:
+                subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+                st.write("**Subject-wise Hours:**")
+                st.bar_chart(subject_hours)
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Student id", "Student", "Class", "Syllabus", "Type of class", "Hr", "Day", "Time"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
+        required_columns = ["Date", "Student id", "Student", "Class", "Syllabus", "Type of class", "Hr", "Day", "Time"]
+        filtered_data = check_and_filter_columns(filtered_data, required_columns)
 
         st.subheader("Daily Class Data")
         
@@ -120,7 +130,7 @@ def show_filtered_data(filtered_data, role, teacher_name=None):
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
 
-    st.title("App is Updating Now")
+    st.title("Angle Belearn: Your Daily Class Insights")
 
     # Load data once at the start
     if "main_data" not in st.session_state:
@@ -137,7 +147,10 @@ def manage_data(data, role):
     st.subheader(f"{role} Data")
 
     # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+    if "MM" in data.columns:
+        month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+    else:
+        st.warning("Month column 'MM' is missing in the data.")
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
@@ -145,14 +158,17 @@ def manage_data(data, role):
             student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Student"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Student id"].str.lower().str.strip() == student_id) & 
-                                     (data["Student"].str.lower().str.contains(student_name_part))]
-                
-                if not filtered_data.empty:
-                    show_filtered_data(filtered_data, role)
+                if "Student id" in data.columns and "Student" in data.columns:
+                    filtered_data = data[(data["MM"] == month) & 
+                                         (data["Student id"].str.lower().str.strip() == student_id) & 
+                                         (data["Student"].str.lower().str.contains(student_name_part))]
+                    
+                    if not filtered_data.empty:
+                        show_filtered_data(filtered_data, role)
+                    else:
+                        st.error("Verification failed. Please check your details.")
                 else:
-                    st.error("Verification failed. Please check your details.")
+                    st.warning("Required columns for Student verification are missing.")
 
     elif role == "Teacher":
         with st.expander("Teacher Verification", expanded=True):
@@ -160,16 +176,19 @@ def manage_data(data, role):
             teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Teacher"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-                
-                if not filtered_data.empty:
-                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
-                    st.markdown(f"## 👩‍🏫 Welcome, {teacher_name}!")
-                    show_filtered_data(filtered_data, role, teacher_name)
+                if "Teachers ID" in data.columns and "Teachers Name" in data.columns:
+                    filtered_data = data[(data["MM"] == month) & 
+                                         (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
+                                         (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+                    
+                    if not filtered_data.empty:
+                        teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                        st.markdown(f"## 👩‍🏫 Welcome, {teacher_name}!")
+                        show_filtered_data(filtered_data, role, teacher_name)
+                    else:
+                        st.error("Verification failed. Please check your details.")
                 else:
-                    st.error("Verification failed. Please check your details.")
+                    st.warning("Required columns for Teacher verification are missing.")
 
 if __name__ == "__main__":
     main()
