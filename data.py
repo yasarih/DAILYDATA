@@ -53,9 +53,9 @@ def fetch_data_from_sheet_by_link(sheet_link, worksheet_name):
 
 # Load data from main sheet, EM list sheet, and weekly timetable sheet
 def load_all_data():
-    main_data = fetch_data_from_sheet_by_link("LINK_TO_MAIN_SHEET", "Student class details")
-    em_data = fetch_data_from_sheet_by_link("LINK_TO_EM_SHEET", "EM List")
-    timetable_data = fetch_data_from_sheet_by_link("LINK_TO_TIMETABLE_SHEET", "Weekly Timetable")
+    main_data = fetch_data_from_sheet_by_link("https://docs.google.com/spreadsheets/d/17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y/edit?gid=148340814#gid=148340814", "Student class details")
+    em_data = fetch_data_from_sheet_by_link("https://docs.google.com/spreadsheets/d/1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU/edit?gid=1473623416#gid=1473623416", "Console")
+    timetable_data = fetch_data_from_sheet_by_link("https://docs.google.com/spreadsheets/d/1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU/edit?gid=1473623416#gid=1473623416", "Console")
     
     # Save to session state to avoid redundant loading
     st.session_state.main_data = main_data
