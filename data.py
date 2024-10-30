@@ -261,5 +261,3 @@ def manage_data(data, role):
 
 if __name__ == "__main__":
     main()
-
-this is my code, i want to improve the output from this output
