@@ -120,7 +120,7 @@ def show_filtered_data(filtered_data, role, teacher_name=None):
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
 
-    st.title("Angle Belearn: Your Daily Class Insights")
+    st.title("App is Updating Now")
 
     # Load data once at the start
     if "main_data" not in st.session_state:
