@@ -133,7 +133,7 @@ def welcome_teacher(teacher_name):
                 👩‍🏫 Welcome, {teacher_name}!
             </h1>
             <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
-                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
+                App is updating now, so some errors might be there 📊.
             </p>
         </div>
     """, unsafe_allow_html=True)
