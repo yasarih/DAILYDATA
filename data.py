@@ -228,17 +228,20 @@ def manage_data(data, role):
     st.subheader(f"{role} Data")
 
     # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
+    month = st.sidebar.selectbox("Select Month", sorted(data["mm"].unique()))
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
             student_id = st.text_input("Enter Student ID").strip().lower()
             student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
+            # Check for both "student" and "student name" columns
+            student_column = "student" if "student" in data.columns else "student name"
+
             if st.button("Verify Student"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Student id"].str.lower().str.strip() == student_id) & 
-                                     (data["Student"].str.lower().str.contains(student_name_part))]
+                filtered_data = data[(data["mm"] == month) & 
+                                     (data["student id"].str.lower().str.strip() == student_id) & 
+                                     (data[student_column].str.lower().str.contains(student_name_part))]
 
                 if not filtered_data.empty:
                     show_filtered_data(filtered_data, role)
@@ -251,16 +254,17 @@ def manage_data(data, role):
             teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Teacher"):
-                filtered_data = data[(data["MM"] == month) & 
-                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+                filtered_data = data[(data["mm"] == month) & 
+                                     (data["teachers id"].str.lower().str.strip() == teacher_id) & 
+                                     (data["teachers name"].str.lower().str.contains(teacher_name_part))]
 
                 if not filtered_data.empty:
-                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
-                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
+                    teacher_name = filtered_data["teachers name"].iloc[0]
+                    welcome_teacher(teacher_name)
                     show_filtered_data(filtered_data, role)
                 else:
                     st.error("Verification failed. Please check your details.")
+
 
 if __name__ == "__main__":
     main()
