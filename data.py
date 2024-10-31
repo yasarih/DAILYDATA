@@ -72,6 +72,24 @@ def fetch_all_data(spreadsheet_id, worksheet_name):
         st.warning("No data found or the sheet is incorrectly formatted.")
         return pd.DataFrame()
 
+# Function to merge student data with emergency contact (EM) data
+@st.cache_data
+def get_merged_data_with_em():
+    main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
+    em_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
+    
+    # Normalize column names in both DataFrames
+    main_data.columns = main_data.columns.str.lower().str.strip()
+    em_data.columns = em_data.columns.str.lower().str.strip()
+    
+    # Rename columns to ensure compatibility for merging
+    main_data = main_data.rename(columns={'student id': 'student id'})
+    em_data = em_data.rename(columns={'student id': 'student id', 'em': 'em', 'em phone': 'phone number'})
+
+    # Merge main_data with em_data on 'student id'
+    merged_data = main_data.merge(em_data[['student id', 'em', 'phone number']], on="student id", how="left")
+    return merged_data
+
 # Function to display a welcome message for the teacher
 def welcome_teacher(teacher_name):
     st.markdown(f"""
