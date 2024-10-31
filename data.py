@@ -74,17 +74,32 @@ def welcome_teacher(teacher_name):
         </div>
     """, unsafe_allow_html=True)
 
+# Function to merge student data with emergency contact (EM) data
+@st.cache_data
 def get_merged_data_with_em():
     main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
-    main_data = main_data.rename(columns={'Student id': 'Student ID'})
-    em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
-
-    merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
+    # Normalize column names in both DataFrames
+    main_data.columns = main_data.columns.str.lower().str.strip()
+    em_data.columns = em_data.columns.str.lower().str.strip()
+    
+    # Merge on 'student id'
+    merged_data = main_data.merge(em_data[['student id', 'em', 'phone number']], on="student id", how="left")
+    
+    # Check for and add 'mm' column if necessary
+    if 'mm' not in merged_data.columns:
+        if 'date' in merged_data.columns:
+            merged_data['date'] = pd.to_datetime(merged_data['date'], errors='coerce')
+            merged_data['mm'] = merged_data['date'].dt.strftime('%B')
+        else:
+            st.error("Unable to add 'mm' column. Ensure 'date' or 'mm' column exists in sheets.")
+    
+    # Debugging output for column names
+    st.write("Merged Data Columns:", merged_data.columns.tolist())
+    st.write("Sample Merged Data:", merged_data.head())
+    
     return merged_data
-
-# Function to calculate salary
 def calculate_salary(row):
     student_id = row['Student ID'].strip().lower()
     syllabus = row['Syllabus'].strip().lower()
