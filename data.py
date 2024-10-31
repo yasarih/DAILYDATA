@@ -43,34 +43,37 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     return sheet
 
 # Function to fetch all data without caching to always get updated values
+@st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
     with st.spinner("Fetching data..."):
         sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
         data = sheet.get_all_values()
 
         if data and len(data) > 1:
-            headers = pd.Series(data[0])
-            headers = headers.fillna('').str.strip()
+            headers = pd.Series(data[0]).fillna('').str.strip()
             headers = headers.where(headers != '', other='Unnamed')
             headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
             df = pd.DataFrame(data[1:], columns=headers)
             df.replace('', np.nan, inplace=True)
-            df.ffill(inplace=True)  # Use forward fill instead of deprecated method
+            df.ffill(inplace=True)
 
-            for column in df.columns:
-                df[column] = df[column].astype(str).str.strip()
+            # Print columns for debugging
+            st.write("Loaded Data Columns:", df.columns.tolist())
+            
+            # Ensure all columns are stripped and normalized to lowercase
+            df.columns = df.columns.str.lower().str.strip()
 
-            numeric_cols = ['Hr']
+            # Convert specific columns to numeric
+            numeric_cols = ['hr']
             for col in numeric_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
+            return df
         else:
             st.warning("No data found or the sheet is incorrectly formatted.")
-            df = pd.DataFrame()
-
-        return df
+            return pd.DataFrame()
 
 # Function to extract the first few letters from the name
 def extract_first_letters(name):
