@@ -121,9 +121,20 @@ def calculate_salary(row):
     return 0
 
 # Function to show filtered data based on role
+# Function to show filtered data based on role
 def show_filtered_data(filtered_data, role):
+    # Define required columns based on role
+    student_columns = ["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]
+    teacher_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
+
     if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
+        # Check if all columns exist in filtered_data for students
+        missing_columns = [col for col in student_columns if col not in filtered_data.columns]
+        if missing_columns:
+            st.error(f"Missing columns for student data view: {', '.join(missing_columns)}")
+            return
+        
+        filtered_data = filtered_data[student_columns]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
 
         total_hours = filtered_data["Hr"].sum()
@@ -134,18 +145,26 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        # Check if all columns exist in filtered_data for teachers
+        missing_columns = [col for col in teacher_columns if col not in filtered_data.columns]
+        if missing_columns:
+            st.error(f"Missing columns for teacher data view: {', '.join(missing_columns)}")
+            return
+        
+        filtered_data = filtered_data[teacher_columns]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
         st.subheader("Daily Class Data")
         st.write(filtered_data)  
 
+        # Calculate salary
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
         total_hours = filtered_data["Hr"].sum()
         st.write(f"**Total Hours:** {total_hours:.2f}")
         st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
 
+        # Salary breakdown
         salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
             'Hr': 'sum', 'Salary': 'sum'
         }).reset_index()
