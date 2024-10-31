@@ -40,6 +40,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
 
 # Cached function to fetch data from Google Sheets
 @st.cache_data
+# After loading the data
 def fetch_all_data(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     data = sheet.get_all_values()
@@ -48,6 +49,10 @@ def fetch_all_data(spreadsheet_id, worksheet_name):
         headers = headers.where(headers != '', other='Unnamed')
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
         df = pd.DataFrame(data[1:], columns=headers)
+        
+        # Print column names for debugging
+        print("Loaded columns:", df.columns.tolist())
+        
         df.replace('', pd.NA, inplace=True)
         df.ffill(inplace=True)
         
