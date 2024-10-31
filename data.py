@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+import numpy as np
 import json
 
 # Set page layout and title
@@ -11,100 +12,97 @@ st.set_page_config(
     layout="wide"
 )
 
-# Function to load credentials from Streamlit secrets
+# Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
     return credentials_info
 
-# Cached function to connect to Google Sheets using credentials from Streamlit secrets
-@st.cache_data
-def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    # Load credentials from Streamlit secrets
+# Function to connect to Google Sheets using the credentials from secrets for the new project
+def connect_to_google_sheets(spreadsheet_name, worksheet_name):
+    # Load the credentials from Streamlit secrets
     credentials_info = load_credentials_from_secrets()
     
-    # Define scopes required for Google Sheets API
+    # Define the required scopes for Google Sheets API
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/drive.file"
     ]
     
-    # Create credentials and authorize gspread
+    # Create credentials using the loaded info and defined scopes
     credentials = Credentials.from_service_account_info(
         credentials_info,
         scopes=scopes
     )
+    
+    # Authorize gspread with the credentials
     client = gspread.authorize(credentials)
-    sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
+    
+    # Open the spreadsheet and access the specified worksheet
+    sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
-# Cached function to fetch data from Google Sheets
-@st.cache_data
-# After loading the data
-def fetch_all_data(spreadsheet_id, worksheet_name):
-    sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
-    data = sheet.get_all_values()
-    if data and len(data) > 1:
-        headers = pd.Series(data[0]).fillna('').str.strip()
-        headers = headers.where(headers != '', other='Unnamed')
-        headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
-        df = pd.DataFrame(data[1:], columns=headers)
-        
-        # Print column names for debugging
-        print("Loaded columns:", df.columns.tolist())
-        
-        df.replace('', pd.NA, inplace=True)
-        df.ffill(inplace=True)
-        
-        # Convert 'Hr' column to numeric if it exists
-        if 'Hr' in df.columns:
-            df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
-        
+# Function to fetch all data without caching to always get updated values
+def fetch_all_data(spreadsheet_name, worksheet_name):
+    with st.spinner("Fetching data..."):
+        sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
+        data = sheet.get_all_values()
+
+        if data and len(data) > 1:
+            headers = pd.Series(data[0])
+            headers = headers.fillna('').str.strip()
+            headers = headers.where(headers != '', other='Unnamed')
+            headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
+
+            df = pd.DataFrame(data[1:], columns=headers)
+            df.replace('', np.nan, inplace=True)
+            df.ffill(inplace=True)  # Use forward fill instead of deprecated method
+
+            for column in df.columns:
+                df[column] = df[column].astype(str).str.strip()
+
+            numeric_cols = ['Hr']
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+        else:
+            st.warning("No data found or the sheet is incorrectly formatted.")
+            df = pd.DataFrame()
+
         return df
+
+# Function to extract the first few letters from the name
+def extract_first_letters(name):
+    name_parts = name.strip().split()  # Split the name by spaces
+    if len(name_parts) >= 2:
+        # If there are two parts (first name and last name), take first three letters of first name and first letter of last name
+        return (name_parts[0][:3] + name_parts[1][0]).lower()
     else:
-        st.warning("No data found or the sheet is incorrectly formatted.")
-        return pd.DataFrame()
+        # Otherwise, take the first four letters of the first name
+        return name_parts[0][:4].lower()
 
-# Function to merge student and EM data
-@st.cache_data
-def get_merged_data_with_em():
-    main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
-    em_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
-    
-    main_data = main_data.rename(columns={'Student id': 'Student ID'})
-    em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
-
-    merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
-    return merged_data
-# Function to display a welcome message for the teacher
-def welcome_teacher(teacher_name):
-    st.markdown(f"""
-        <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
-            <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
-                👩‍🏫 Welcome, {teacher_name}!
-            </h1>
-            <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
-                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-
-
-# Function to calculate salary
+# Salary calculation function (for overall salary)
 def calculate_salary(row):
-    student_id = row['Student ID'].strip().lower()
+    student_id = row['Student id'].strip().lower()  # To identify the demo class using student ID
     syllabus = row['Syllabus'].strip().lower()
     class_type = row['Type of class'].strip().lower()
     hours = row['Hr']
 
+    # Handle demo classes based on the 'Student id'
     if 'demo class i - x' in student_id:
         return hours * 150
     elif 'demo class xi - xii' in student_id:
         return hours * 180
+
+    # Handle paid classes
     elif class_type.startswith("paid"):
         return hours * 4 * 100
+
+    # Handle regular, additional, exam types based on syllabus and class level
     else:
         class_level = int(row['Class']) if row['Class'].isdigit() else None
+
         if syllabus in ['igcse', 'ib']:
             if class_level is not None:
                 if 1 <= class_level <= 4:
@@ -123,124 +121,100 @@ def calculate_salary(row):
                     return hours * 150
                 elif 11 <= class_level <= 12:
                     return hours * 180
-    return 0
 
-# Function to show filtered data based on role
-# Function to show filtered data based on role
+    return 0  # Default case if no condition matches
+
+# Function to display a welcome message for the teacher
+def welcome_teacher(teacher_name):
+    # Adding a large, bold, colorful welcome message with the teacher's name
+    st.markdown(f"""
+        <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
+            <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
+                👩‍🏫 Welcome, {teacher_name}!
+            </h1>
+            <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
+                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Function to highlight rows where a student has more than one entry for the same day
+# Function to highlight rows where a student has more than one entry for the same day
+def highlight_multiple_entries(df):
+    # Create a mask that identifies rows where a student has more than one entry for the same date
+    is_duplicate = df.duplicated(subset=["Student id", "Date"], keep=False)
+    # Add the 'is_duplicate' column to use in styling
+    df['is_duplicate'] = is_duplicate
+    return df
+
+# Updated function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
-    # Define required columns based on role
-    student_columns = ["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]
-    teacher_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
-
     if role == "Student":
-        # Check if all columns exist in filtered_data for students
-        missing_columns = [col for col in student_columns if col not in filtered_data.columns]
-        if missing_columns:
-            st.error(f"Missing columns for student data view: {', '.join(missing_columns)}")
-            return
-        
-        filtered_data = filtered_data[student_columns]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
+        # Display total hours and subject-wise breakdown
         total_hours = filtered_data["Hr"].sum()
         st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
         subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
         st.write("**Subject-wise Hours:**")
-        st.write(subject_hours)  
+        st.bar_chart(subject_hours)
         st.write(filtered_data)
 
     elif role == "Teacher":
-        # Check if all columns exist in filtered_data for teachers
-        missing_columns = [col for col in teacher_columns if col not in filtered_data.columns]
-        if missing_columns:
-            st.error(f"Missing columns for teacher data view: {', '.join(missing_columns)}")
-            return
-        
-        filtered_data = filtered_data[teacher_columns]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
-        
-        st.subheader("Daily Class Data")
-        st.write(filtered_data)  
+        filtered_data = filtered_data[["Date", "Student id", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
-        # Calculate salary
+        st.subheader("Daily Class Data")
+        
+        # Highlight rows with more than one entry for the same student on the same day
+        filtered_data = highlight_multiple_entries(filtered_data)  # Pre-process the DataFrame to mark duplicates
+
+        def apply_highlight(row):
+            return ['background-color: yellow'] * len(row) if row['is_duplicate'] else [''] * len(row)
+
+        styled_df = filtered_data.style.apply(apply_highlight, axis=1)
+        st.dataframe(styled_df)  # Display styled DataFrame without unsafe_allow_html
+        
+        # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours:** {total_hours:.2f}")
-        st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
 
-        # Salary breakdown
-        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
-            'Hr': 'sum', 'Salary': 'sum'
-        }).reset_index()
-        st.subheader("Salary Breakdown by Class and Board")
+        # Calculate total hours as well
+        total_hours = filtered_data['Hr'].sum()
+
+        # Grouping by Class, Syllabus, and Type of Class
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({'Hr': 'sum', 'Salary': 'sum'}).reset_index()
+
+        st.subheader("Salary Breakdown")
+        st.write(f"**Total Hours till last update: {total_hours:.2f} hours**")
+        st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
+        
+        # Show the salary breakdown
         st.write(salary_split)
+        st.bar_chart(salary_split.set_index('Class')['Salary'])
 
-# Function to show teacher's weekly schedule
-def show_teacher_schedule(teacher_id):
-    st.subheader("Your Weekly Schedule")
-    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    schedule_data = pd.DataFrame()
+# No other changes are needed for the rest of the code
 
-    for day in days:
-        try:
-            day_data = fetch_all_data("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
-            required_columns = {"Teacher ID", "Time Slot", "Student ID"}
-            if not required_columns.issubset(day_data.columns):
-                st.warning(f"Missing columns in {day} sheet. Expected columns: {required_columns}")
-                continue
 
-            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
-            day_data['Day'] = day
-            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
-        except Exception as e:
-            st.error(f"Error loading {day} schedule: {e}")
-
-    if not schedule_data.empty:
-        schedule_pivot = schedule_data.pivot(index="Time Slot", columns="Day", values="Student ID").reindex(columns=days)
-        st.write(schedule_pivot)
-    else:
-        st.write("No schedule found for this teacher.")
-
-# Function to display a table with students, their EMs, and EM's phone number
-# Function to display a table with students, their EMs, and EM's phone number
-def show_student_em_table(data, teacher_name):
-    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-
-    # Define the required columns
-    required_columns = ["Teachers Name", "Student ID", "EM", "Phone Number"]
-    
-    # Check if the required columns are in the data
-    missing_columns = [col for col in required_columns if col not in data.columns]
-    if missing_columns:
-        st.error(f"Missing columns in data for student EM table: {', '.join(missing_columns)}")
-        return
-
-    # Determine student column name based on available columns
-    if "Student Name" in data.columns:
-        student_column = "Student Name"
-    elif "Student" in data.columns:
-        student_column = "Student"
-    else:
-        st.error("Student name column not found.")
-        return
-
-    # Filter data for the selected teacher
-    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
-    st.write(student_em_table)
 
 # Main function to handle user role selection and page display
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
+
     st.title("Angle Belearn: Your Daily Class Insights")
+
+    # Sheet and headers details
+    spreadsheet_name = 'Student Daily Class Details 2024'
+    worksheet_name = 'Student class details'
 
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
     if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
+        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
     
     if "data" not in st.session_state:
-        st.session_state.data = get_merged_data_with_em()
+        st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
 
     if role != "Select":
         manage_data(st.session_state.data, role)
@@ -249,6 +223,8 @@ def main():
 
 def manage_data(data, role):
     st.subheader(f"{role} Data")
+
+    # Filter by month before verification
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     if role == "Student":
@@ -258,7 +234,7 @@ def manage_data(data, role):
 
             if st.button("Verify Student"):
                 filtered_data = data[(data["MM"] == month) & 
-                                     (data["Student ID"].str.lower().str.strip() == student_id) & 
+                                     (data["Student id"].str.lower().str.strip() == student_id) & 
                                      (data["Student"].str.lower().str.contains(student_name_part))]
                 
                 if not filtered_data.empty:
@@ -277,11 +253,9 @@ def manage_data(data, role):
                                      (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
                 
                 if not filtered_data.empty:
-                    teacher_name = filtered_data["Teachers Name"].iloc[0]
-                    welcome_teacher(teacher_name)
+                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
                     show_filtered_data(filtered_data, role)
-                    show_teacher_schedule(teacher_id)
-                    show_student_em_table(data, teacher_name)
                 else:
                     st.error("Verification failed. Please check your details.")
 
