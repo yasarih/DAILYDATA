@@ -120,37 +120,56 @@ def calculate_salary(row):
     return 0
 
 # Optimized function to display filtered data based on the role (Student or Teacher)
+# Function to show filtered data based on role
 def show_filtered_data(filtered_data, role):
-    if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+    # Define required columns based on role in lowercase to match standardized column names
+    student_columns = ["date", "subject", "chapter taken", "teachers name", "hr", "type of class"]
+    teacher_columns = ["date", "student id", "student", "class", "syllabus", "type of class", "hr"]
 
-        total_hours = filtered_data["Hr"].sum()
+    if role == "Student":
+        # Check if all columns exist in filtered_data for students
+        missing_columns = [col for col in student_columns if col not in filtered_data.columns]
+        if missing_columns:
+            st.error(f"Missing columns for student data view: {', '.join(missing_columns)}")
+            return
+        
+        filtered_data = filtered_data[student_columns]
+        filtered_data["hr"] = filtered_data["hr"].round(2)
+
+        total_hours = filtered_data["hr"].sum()
         st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+        subject_hours = filtered_data.groupby("subject")["hr"].sum()
         st.write("**Subject-wise Hours:**")
         st.write(subject_hours)  
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        # Check if all columns exist in filtered_data for teachers
+        missing_columns = [col for col in teacher_columns if col not in filtered_data.columns]
+        if missing_columns:
+            st.error(f"Missing columns for teacher data view: {', '.join(missing_columns)}")
+            return
+        
+        filtered_data = filtered_data[teacher_columns]
+        filtered_data["hr"] = filtered_data["hr"].round(2)
         
         st.subheader("Daily Class Data")
         st.write(filtered_data)  
 
-        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
-        total_salary = filtered_data['Salary'].sum()
-        total_hours = filtered_data["Hr"].sum()
+        # Calculate salary
+        filtered_data['salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['salary'].sum()
+        total_hours = filtered_data["hr"].sum()
         st.write(f"**Total Hours:** {total_hours:.2f}")
         st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
 
-
-        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
-            'Hr': 'sum', 'Salary': 'sum'
+        # Salary breakdown
+        salary_split = filtered_data.groupby(['class', 'syllabus', 'type of class']).agg({
+            'hr': 'sum', 'salary': 'sum'
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
+
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
