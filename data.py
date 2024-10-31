@@ -21,59 +21,56 @@ def load_credentials_from_secrets():
 def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     # Load the credentials from Streamlit secrets
     credentials_info = load_credentials_from_secrets()
-
+    
     # Define the required scopes for Google Sheets API
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/drive.file"
     ]
-
+    
     # Create credentials using the loaded info and defined scopes
     credentials = Credentials.from_service_account_info(
         credentials_info,
         scopes=scopes
     )
-
+    
     # Authorize gspread with the credentials
     client = gspread.authorize(credentials)
-
+    
     # Open the spreadsheet and access the specified worksheet
     sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
     return sheet
 
 # Function to fetch all data without caching to always get updated values
-@st.cache_data
 def fetch_all_data(spreadsheet_name, worksheet_name):
     with st.spinner("Fetching data..."):
         sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
         data = sheet.get_all_values()
 
         if data and len(data) > 1:
-            headers = pd.Series(data[0]).fillna('').str.strip()
+            headers = pd.Series(data[0])
+            headers = headers.fillna('').str.strip()
             headers = headers.where(headers != '', other='Unnamed')
             headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
 
             df = pd.DataFrame(data[1:], columns=headers)
             df.replace('', np.nan, inplace=True)
-            df.ffill(inplace=True)
+            df.ffill(inplace=True)  # Use forward fill instead of deprecated method
 
-            # Print columns for debugging
-            st.write("Loaded Data Columns:", df.columns.tolist())
-            
-            # Ensure all columns are stripped and normalized to lowercase
-            df.columns = df.columns.str.lower().str.strip()
+            for column in df.columns:
+                df[column] = df[column].astype(str).str.strip()
 
-            # Convert specific columns to numeric
-            numeric_cols = ['hr']
+            numeric_cols = ['Hr']
             for col in numeric_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-            return df
         else:
             st.warning("No data found or the sheet is incorrectly formatted.")
-            return pd.DataFrame()
+            df = pd.DataFrame()
+
+        return df
 
 # Function to extract the first few letters from the name
 def extract_first_letters(name):
@@ -169,7 +166,7 @@ def show_filtered_data(filtered_data, role):
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
         st.subheader("Daily Class Data")
-
+        
         # Highlight rows with more than one entry for the same student on the same day
         filtered_data = highlight_multiple_entries(filtered_data)  # Pre-process the DataFrame to mark duplicates
 
@@ -178,7 +175,7 @@ def show_filtered_data(filtered_data, role):
 
         styled_df = filtered_data.style.apply(apply_highlight, axis=1)
         st.dataframe(styled_df)  # Display styled DataFrame without unsafe_allow_html
-
+        
         # Calculate salary for total hours based on conditions
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
@@ -192,7 +189,7 @@ def show_filtered_data(filtered_data, role):
         st.subheader("Salary Breakdown")
         st.write(f"**Total Hours till last update: {total_hours:.2f} hours**")
         st.write(f"**Total Salary till last update: ₹{total_salary:.2f}** _This is based on the basic pattern of our salary structure. Accurate values may change on a case-by-case basis._")
-
+        
         # Show the salary breakdown
         st.write(salary_split)
         st.bar_chart(salary_split.set_index('Class')['Salary'])
@@ -215,7 +212,7 @@ def main():
 
     if st.sidebar.button("Refresh Data"):
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
-
+    
     if "data" not in st.session_state:
         st.session_state.data = fetch_all_data(spreadsheet_name, worksheet_name)
 
@@ -228,21 +225,18 @@ def manage_data(data, role):
     st.subheader(f"{role} Data")
 
     # Filter by month before verification
-    month = st.sidebar.selectbox("Select Month", sorted(data["mm"].unique()))
+    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
             student_id = st.text_input("Enter Student ID").strip().lower()
             student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-            # Check for both "student" and "student name" columns
-            student_column = "student" if "student" in data.columns else "student name"
-
             if st.button("Verify Student"):
-                filtered_data = data[(data["mm"] == month) & 
-                                     (data["student id"].str.lower().str.strip() == student_id) & 
-                                     (data[student_column].str.lower().str.contains(student_name_part))]
-
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Student id"].str.lower().str.strip() == student_id) & 
+                                     (data["Student"].str.lower().str.contains(student_name_part))]
+                
                 if not filtered_data.empty:
                     show_filtered_data(filtered_data, role)
                 else:
@@ -254,17 +248,16 @@ def manage_data(data, role):
             teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Teacher"):
-                filtered_data = data[(data["mm"] == month) & 
-                                     (data["teachers id"].str.lower().str.strip() == teacher_id) & 
-                                     (data["teachers name"].str.lower().str.contains(teacher_name_part))]
-
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
+                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+                
                 if not filtered_data.empty:
-                    teacher_name = filtered_data["teachers name"].iloc[0]
-                    welcome_teacher(teacher_name)
+                    teacher_name = filtered_data["Teachers Name"].iloc[0]  # Get the first matching teacher name
+                    welcome_teacher(teacher_name)  # Show the welcome message with the teacher's name
                     show_filtered_data(filtered_data, role)
                 else:
                     st.error("Verification failed. Please check your details.")
-
 
 if __name__ == "__main__":
     main()
