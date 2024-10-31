@@ -67,6 +67,10 @@ def fetch_all_data(spreadsheet_id, worksheet_name):
             else:
                 st.error("No 'mm' or 'date' column found. Unable to determine month.")
         
+        # Debugging information
+        st.write("Data Columns:", df.columns.tolist())
+        st.write("Sample Data:", df.head())
+        
         return df
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
@@ -88,6 +92,19 @@ def get_merged_data_with_em():
 
     # Merge main_data with em_data on 'student id'
     merged_data = main_data.merge(em_data[['student id', 'em', 'phone number']], on="student id", how="left")
+    
+    # Ensure 'mm' column exists in the merged data
+    if 'mm' not in merged_data.columns:
+        if 'date' in merged_data.columns:
+            merged_data['date'] = pd.to_datetime(merged_data['date'], errors='coerce')
+            merged_data['mm'] = merged_data['date'].dt.strftime('%B')
+        else:
+            st.error("Unable to add 'mm' column. Ensure 'date' or 'mm' column exists in sheets.")
+    
+    # Debugging information
+    st.write("Merged Data Columns:", merged_data.columns.tolist())
+    st.write("Sample Merged Data:", merged_data.head())
+    
     return merged_data
 
 # Function to display a welcome message for the teacher
