@@ -74,55 +74,17 @@ def welcome_teacher(teacher_name):
         </div>
     """, unsafe_allow_html=True)
 
-# Function to merge student data with emergency contact (EM) data
-@st.cache_data
 def get_merged_data_with_em():
     main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
-    # Normalize column names in both DataFrames
-    main_data.columns = main_data.columns.str.lower().str.strip()
-    em_data.columns = em_data.columns.str.lower().str.strip()
-    
-    # Merge on 'student id'
-    merged_data = main_data.merge(em_data[['student id', 'em', 'phone number']], on="student id", how="left")
-    
-    # Check for and add 'mm' column if necessary
-    if 'mm' not in merged_data.columns:
-        if 'date' in merged_data.columns:
-            merged_data['date'] = pd.to_datetime(merged_data['date'], errors='coerce')
-            merged_data['mm'] = merged_data['date'].dt.strftime('%B')
-        else:
-            st.error("Unable to add 'mm' column. Ensure 'date' or 'mm' column exists in sheets.")
-    
-    # Debugging output for column names
-    st.write("Merged Data Columns:", merged_data.columns.tolist())
-    st.write("Sample Merged Data:", merged_data.head())
-    
+    main_data = main_data.rename(columns={'Student id': 'Student ID'})
+    em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
+
+    merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
-def show_student_em_table(data, teacher_name):
-    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-
-    # Define required columns in lowercase
-    required_columns = ["teachers name", "student id", "em", "phone number"]
-    missing_columns = [col for col in required_columns if col not in data.columns]
-    if missing_columns:
-        st.error(f"Missing columns in data for student EM table: {', '.join(missing_columns)}")
-        return
-
-    # Determine student column name based on available columns
-    if "student name" in data.columns:
-        student_column = "student name"
-    elif "student" in data.columns:
-        student_column = "student"
-    else:
-        st.error("Student name column not found.")
-        return
-
-    # Filter data for the selected teacher
-    student_em_table = data[data["teachers name"] == teacher_name][["student id", student_column, "em", "phone number"]].drop_duplicates()
-    st.write(student_em_table)
+# Function to calculate salary
 def calculate_salary(row):
     student_id = row['Student ID'].strip().lower()
     syllabus = row['Syllabus'].strip().lower()
@@ -158,56 +120,37 @@ def calculate_salary(row):
     return 0
 
 # Optimized function to display filtered data based on the role (Student or Teacher)
-# Function to show filtered data based on role
 def show_filtered_data(filtered_data, role):
-    # Define required columns based on role in lowercase to match standardized column names
-    student_columns = ["date", "subject", "chapter taken", "teachers name", "hr", "type of class"]
-    teacher_columns = ["date", "student id", "student", "class", "syllabus", "type of class", "hr"]
-
     if role == "Student":
-        # Check if all columns exist in filtered_data for students
-        missing_columns = [col for col in student_columns if col not in filtered_data.columns]
-        if missing_columns:
-            st.error(f"Missing columns for student data view: {', '.join(missing_columns)}")
-            return
-        
-        filtered_data = filtered_data[student_columns]
-        filtered_data["hr"] = filtered_data["hr"].round(2)
+        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)
 
-        total_hours = filtered_data["hr"].sum()
+        total_hours = filtered_data["Hr"].sum()
         st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("subject")["hr"].sum()
+        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
         st.write("**Subject-wise Hours:**")
         st.write(subject_hours)  
         st.write(filtered_data)
 
     elif role == "Teacher":
-        # Check if all columns exist in filtered_data for teachers
-        missing_columns = [col for col in teacher_columns if col not in filtered_data.columns]
-        if missing_columns:
-            st.error(f"Missing columns for teacher data view: {', '.join(missing_columns)}")
-            return
-        
-        filtered_data = filtered_data[teacher_columns]
-        filtered_data["hr"] = filtered_data["hr"].round(2)
+        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
         st.subheader("Daily Class Data")
         st.write(filtered_data)  
 
-        # Calculate salary
-        filtered_data['salary'] = filtered_data.apply(calculate_salary, axis=1)
-        total_salary = filtered_data['salary'].sum()
-        total_hours = filtered_data["hr"].sum()
+        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['Salary'].sum()
+        total_hours = filtered_data["Hr"].sum()
         st.write(f"**Total Hours:** {total_hours:.2f}")
         st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
 
-        # Salary breakdown
-        salary_split = filtered_data.groupby(['class', 'syllabus', 'type of class']).agg({
-            'hr': 'sum', 'salary': 'sum'
+
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
+            'Hr': 'sum', 'Salary': 'sum'
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
-
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
