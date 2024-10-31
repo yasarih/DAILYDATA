@@ -100,6 +100,29 @@ def get_merged_data_with_em():
     st.write("Sample Merged Data:", merged_data.head())
     
     return merged_data
+
+def show_student_em_table(data, teacher_name):
+    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
+
+    # Define required columns in lowercase
+    required_columns = ["teachers name", "student id", "em", "phone number"]
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"Missing columns in data for student EM table: {', '.join(missing_columns)}")
+        return
+
+    # Determine student column name based on available columns
+    if "student name" in data.columns:
+        student_column = "student name"
+    elif "student" in data.columns:
+        student_column = "student"
+    else:
+        st.error("Student name column not found.")
+        return
+
+    # Filter data for the selected teacher
+    student_em_table = data[data["teachers name"] == teacher_name][["student id", student_column, "em", "phone number"]].drop_duplicates()
+    st.write(student_em_table)
 def calculate_salary(row):
     student_id = row['Student ID'].strip().lower()
     syllabus = row['Syllabus'].strip().lower()
