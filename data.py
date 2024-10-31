@@ -47,66 +47,20 @@ def fetch_all_data(spreadsheet_id, worksheet_name):
         headers = headers.where(headers != '', other='Unnamed')
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
         df = pd.DataFrame(data[1:], columns=headers)
-        
-        # Standardize column names by stripping whitespace and converting to lowercase
-        df.columns = df.columns.str.strip().str.lower()
-        
         df.replace('', pd.NA, inplace=True)
         df.ffill(inplace=True)
         
-        # Convert 'hr' column to numeric if it exists
-        if 'hr' in df.columns:
-            df['hr'] = pd.to_numeric(df['hr'], errors='coerce').fillna(0)
-        
-        # Check for month column or extract month from 'date' column
-        if 'mm' not in df.columns:
-            if 'date' in df.columns:
-                # Attempt to parse 'date' column to extract month names
-                df['date'] = pd.to_datetime(df['date'], errors='coerce')
-                df['mm'] = df['date'].dt.strftime('%B')  # Extract month name
-            else:
-                st.error("No 'mm' or 'date' column found. Unable to determine month.")
-        
-        # Debugging information
-        st.write("Data Columns:", df.columns.tolist())
-        st.write("Sample Data:", df.head())
+        # Convert 'Hr' column to numeric if it exists
+        if 'Hr' in df.columns:
+            df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
         
         return df
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
         return pd.DataFrame()
 
-# Function to merge student data with emergency contact (EM) data
+# Cached function to fetch and merge student and EM data
 @st.cache_data
-def get_merged_data_with_em():
-    main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
-    em_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
-    
-    # Normalize column names in both DataFrames
-    main_data.columns = main_data.columns.str.lower().str.strip()
-    em_data.columns = em_data.columns.str.lower().str.strip()
-    
-    # Rename columns to ensure compatibility for merging
-    main_data = main_data.rename(columns={'student id': 'student id'})
-    em_data = em_data.rename(columns={'student id': 'student id', 'em': 'em', 'em phone': 'phone number'})
-
-    # Merge main_data with em_data on 'student id'
-    merged_data = main_data.merge(em_data[['student id', 'em', 'phone number']], on="student id", how="left")
-    
-    # Ensure 'mm' column exists in the merged data
-    if 'mm' not in merged_data.columns:
-        if 'date' in merged_data.columns:
-            merged_data['date'] = pd.to_datetime(merged_data['date'], errors='coerce')
-            merged_data['mm'] = merged_data['date'].dt.strftime('%B')
-        else:
-            st.error("Unable to add 'mm' column. Ensure 'date' or 'mm' column exists in sheets.")
-    
-    # Debugging information
-    st.write("Merged Data Columns:", merged_data.columns.tolist())
-    st.write("Sample Merged Data:", merged_data.head())
-    
-    return merged_data
-
 # Function to display a welcome message for the teacher
 def welcome_teacher(teacher_name):
     st.markdown(f"""
@@ -119,6 +73,125 @@ def welcome_teacher(teacher_name):
             </p>
         </div>
     """, unsafe_allow_html=True)
+
+def get_merged_data_with_em():
+    main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
+    em_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
+    
+    main_data = main_data.rename(columns={'Student id': 'Student ID'})
+    em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
+
+    merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
+    return merged_data
+
+# Function to calculate salary
+def calculate_salary(row):
+    student_id = row['Student ID'].strip().lower()
+    syllabus = row['Syllabus'].strip().lower()
+    class_type = row['Type of class'].strip().lower()
+    hours = row['Hr']
+
+    if 'demo class i - x' in student_id:
+        return hours * 150
+    elif 'demo class xi - xii' in student_id:
+        return hours * 180
+    elif class_type.startswith("paid"):
+        return hours * 4 * 100
+    else:
+        class_level = int(row['Class']) if row['Class'].isdigit() else None
+        if syllabus in ['igcse', 'ib']:
+            if class_level is not None:
+                if 1 <= class_level <= 4:
+                    return hours * 120
+                elif 5 <= class_level <= 7:
+                    return hours * 150
+                elif 8 <= class_level <= 10:
+                    return hours * 170
+                elif 11 <= class_level <= 13:
+                    return hours * 200
+        else:
+            if class_level is not None:
+                if 1 <= class_level <= 4:
+                    return hours * 120
+                elif 5 <= class_level <= 10:
+                    return hours * 150
+                elif 11 <= class_level <= 12:
+                    return hours * 180
+    return 0
+
+# Optimized function to display filtered data based on the role (Student or Teacher)
+def show_filtered_data(filtered_data, role):
+    if role == "Student":
+        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
+        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
+        st.write("**Subject-wise Hours:**")
+        st.write(subject_hours)  
+        st.write(filtered_data)
+
+    elif role == "Teacher":
+        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        
+        st.subheader("Daily Class Data")
+        st.write(filtered_data)  
+
+        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['Salary'].sum()
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours:** {total_hours:.2f}")
+        st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
+
+
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
+            'Hr': 'sum', 'Salary': 'sum'
+        }).reset_index()
+        st.subheader("Salary Breakdown by Class and Board")
+        st.write(salary_split)
+
+# Function to show teacher's weekly schedule from the schedule sheet
+def show_teacher_schedule(teacher_id):
+    st.subheader("Your Weekly Schedule")
+    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    schedule_data = pd.DataFrame()
+
+    for day in days:
+        try:
+            day_data = fetch_all_data("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
+            required_columns = {"Teacher ID", "Time Slot", "Student ID"}
+            if not required_columns.issubset(day_data.columns):
+                st.warning(f"Missing columns in {day} sheet. Expected columns: {required_columns}")
+                continue
+
+            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+            day_data['Day'] = day
+            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
+        except Exception as e:
+            st.error(f"Error loading {day} schedule: {e}")
+
+    if not schedule_data.empty:
+        schedule_pivot = schedule_data.pivot(index="Time Slot", columns="Day", values="Student ID").reindex(columns=days)
+        st.write(schedule_pivot)
+    else:
+        st.write("No schedule found for this teacher.")
+
+# Function to display a new table with students, their EMs, and the EM's phone number
+def show_student_em_table(data, teacher_name):
+    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
+
+    if "Student Name" in data.columns:
+        student_column = "Student Name"
+    elif "Student" in data.columns:
+        student_column = "Student"
+    else:
+        st.error("Student name column not found.")
+        return
+
+    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
+    st.write(student_em_table)
 
 # Main function to handle user role selection and page display
 def main():
@@ -140,13 +213,7 @@ def main():
 
 def manage_data(data, role):
     st.subheader(f"{role} Data")
-
-    # Select month from 'mm' column
-    if 'mm' in data.columns:
-        month = st.sidebar.selectbox("Select Month", sorted(data["mm"].dropna().unique()))
-    else:
-        st.error("The 'mm' column is missing from the data, and month selection is unavailable.")
-        return
+    month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
 
     if role == "Student":
         with st.expander("Student Verification", expanded=True):
@@ -154,9 +221,9 @@ def manage_data(data, role):
             student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Student"):
-                filtered_data = data[(data["mm"] == month) & 
-                                     (data["student id"].str.lower().str.strip() == student_id) & 
-                                     (data["student"].str.lower().str.contains(student_name_part))]
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Student ID"].str.lower().str.strip() == student_id) & 
+                                     (data["Student"].str.lower().str.contains(student_name_part))]
                 
                 if not filtered_data.empty:
                     show_filtered_data(filtered_data, role)
@@ -169,14 +236,17 @@ def manage_data(data, role):
             teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
             if st.button("Verify Teacher"):
-                filtered_data = data[(data["mm"] == month) & 
-                                     (data["teachers id"].str.lower().str.strip() == teacher_id) & 
-                                     (data["teachers name"].str.lower().str.contains(teacher_name_part))]
+                filtered_data = data[(data["MM"] == month) & 
+                                     (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
+                                     (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
                 
                 if not filtered_data.empty:
-                    teacher_name = filtered_data["teachers name"].iloc[0]
+                    teacher_name = filtered_data["Teachers Name"].iloc[0]
                     welcome_teacher(teacher_name)
                     show_filtered_data(filtered_data, role)
+
+                    show_teacher_schedule(teacher_id)
+                    show_student_em_table(data, teacher_name)
                 else:
                     st.error("Verification failed. Please check your details.")
 
