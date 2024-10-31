@@ -198,9 +198,20 @@ def show_teacher_schedule(teacher_id):
         st.write("No schedule found for this teacher.")
 
 # Function to display a table with students, their EMs, and EM's phone number
+# Function to display a table with students, their EMs, and EM's phone number
 def show_student_em_table(data, teacher_name):
     st.subheader("List of Students with Corresponding EM and EM's Phone Number")
 
+    # Define the required columns
+    required_columns = ["Teachers Name", "Student ID", "EM", "Phone Number"]
+    
+    # Check if the required columns are in the data
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"Missing columns in data for student EM table: {', '.join(missing_columns)}")
+        return
+
+    # Determine student column name based on available columns
     if "Student Name" in data.columns:
         student_column = "Student Name"
     elif "Student" in data.columns:
@@ -209,6 +220,7 @@ def show_student_em_table(data, teacher_name):
         st.error("Student name column not found.")
         return
 
+    # Filter data for the selected teacher
     student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
     st.write(student_em_table)
 
