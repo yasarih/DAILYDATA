@@ -71,6 +71,19 @@ def get_merged_data_with_em():
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
+# Function to display a welcome message for the teacher
+def welcome_teacher(teacher_name):
+    st.markdown(f"""
+        <div style="background-color:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
+            <h1 style="color:#4CAF50; text-align:center; font-family:Georgia; font-size:45px;">
+                👩‍🏫 Welcome, {teacher_name}!
+            </h1>
+            <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
+                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
 
 # Function to calculate salary
 def calculate_salary(row):
