@@ -39,6 +39,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
 
 # Cached function to fetch data from Google Sheets and standardize column names
 @st.cache_data
+@st.cache_data
 def fetch_all_data(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     data = sheet.get_all_values()
@@ -47,9 +48,12 @@ def fetch_all_data(spreadsheet_id, worksheet_name):
         headers = headers.where(headers != '', other='Unnamed')
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
         df = pd.DataFrame(data[1:], columns=headers)
-        
+
         # Standardize column names by stripping whitespace and converting to lowercase
         df.columns = df.columns.str.strip().str.lower()
+
+        # Debugging output: Print column names after loading
+        st.write("Columns after loading:", df.columns.tolist())
         
         df.replace('', pd.NA, inplace=True)
         df.ffill(inplace=True)
@@ -58,20 +62,22 @@ def fetch_all_data(spreadsheet_id, worksheet_name):
         if 'hr' in df.columns:
             df['hr'] = pd.to_numeric(df['hr'], errors='coerce').fillna(0)
         
-        # Check for month column or extract month from 'date' column
+        # Check if 'mm' column exists; if not, extract it from 'date' if possible
         if 'mm' not in df.columns:
             if 'date' in df.columns:
                 df['date'] = pd.to_datetime(df['date'], errors='coerce')
                 df['mm'] = df['date'].dt.strftime('%B')  # Extract month name
+                st.write("'mm' column created from 'date' column")
             else:
                 st.error("No 'mm' or 'date' column found. Unable to determine month.")
+        else:
+            st.write("'mm' column found in sheet.")
         
         return df
     else:
         st.warning("No data found or the sheet is incorrectly formatted.")
         return pd.DataFrame()
 
-# Function to merge student data with emergency contact (EM) data
 @st.cache_data
 def get_merged_data_with_em():
     main_data = fetch_all_data("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
