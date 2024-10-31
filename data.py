@@ -126,14 +126,16 @@ def show_filtered_data(filtered_data, role):
     student_columns = ["date", "subject", "chapter taken", "teachers name", "hr", "type of class"]
     teacher_columns = ["date", "student id", "student", "class", "syllabus", "type of class", "hr"]
 
-    # Debugging: Show column names in filtered_data
+    # Show available columns in filtered_data for debugging
     st.write("Filtered Data Columns:", filtered_data.columns.tolist())
 
     if role == "Student":
-        # Check if all columns exist in filtered_data for students
+        # Check for missing columns
         missing_columns = [col for col in student_columns if col not in filtered_data.columns]
         if missing_columns:
-            st.error(f"Missing columns for student data view: {', '.join(missing_columns)}")
+            # Display missing columns as a table
+            st.error("Some columns required for student data view are missing.")
+            st.table(pd.DataFrame(missing_columns, columns=["Missing Columns"]))
             return
         
         filtered_data = filtered_data[student_columns]
@@ -147,10 +149,12 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        # Check if all columns exist in filtered_data for teachers
+        # Check for missing columns
         missing_columns = [col for col in teacher_columns if col not in filtered_data.columns]
         if missing_columns:
-            st.error(f"Missing columns for teacher data view: {', '.join(missing_columns)}")
+            # Display missing columns as a table
+            st.error("Some columns required for teacher data view are missing.")
+            st.table(pd.DataFrame(missing_columns, columns=["Missing Columns"]))
             return
         
         filtered_data = filtered_data[teacher_columns]
