@@ -133,7 +133,7 @@ def welcome_teacher(teacher_name):
                 👩‍🏫 Welcome, {teacher_name}!
             </h1>
             <p style="text-align:center; color:#555; font-size:18px; font-family:Arial;">
-                App is updating now, so some errors might be there 📊.
+                We're thrilled to have you here today! Let's dive into your teaching insights 📊.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -162,7 +162,7 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[["Date", "Student id",  "Hr"]]
+        filtered_data = filtered_data[["Date", "Student id", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)  # Round hours to 2 decimal places
 
         st.subheader("Daily Class Data")
