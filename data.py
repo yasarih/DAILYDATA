@@ -66,37 +66,29 @@ def get_merged_data_with_em():
 
 # Function to show student EM data with phone numbers
 # Function to show student EM data with phone numbers and improved error handling
+# Function to show student EM data with phone numbers and improved error handling
 def show_student_em_table(data, teacher_name):
     required_columns = ["Student ID", "Teachers Name", "EM", "Phone Number"]
-    
-    # Debug: Print available columns in `data`
-    st.write("Available columns in data:", data.columns.tolist())
 
-    # Check for missing columns
+    # Check if all required columns are present
     missing_columns = [col for col in required_columns if col not in data.columns]
     if missing_columns:
         st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
         return  # Exit the function if required columns are missing
 
-    # Check for student name column and adjust if needed
-    if "Student Name" in data.columns:
-        student_column = "Student Name"
-    elif "Student" in data.columns:
-        student_column = "Student"
-    else:
+    # Determine the correct student name column
+    student_column = "Student Name" if "Student Name" in data.columns else "Student" if "Student" in data.columns else None
+    if not student_column:
         st.error("Student name column not found.")
         return
 
-    # Filter and display data with relevant columns only
+    # Filter data and display table with only the required columns
     try:
         student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
         st.subheader("List of Students with Corresponding EM and EM's Phone Number")
         st.write(student_em_table)
     except KeyError as e:
         st.error(f"Error accessing data: {e}")
-
-    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
-    st.write(student_em_table)
 
 # Function to calculate salary
 def calculate_salary(row):
