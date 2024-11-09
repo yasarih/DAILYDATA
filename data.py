@@ -11,23 +11,21 @@ st.set_page_config(
     layout="wide"
 )
 
-# Load credentials from Streamlit secrets
+# Load credentials from a JSON file
 def load_credentials():
     try:
-        # Load and parse the JSON data from the 'data' field in secrets
-        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        
+        with open("creds.json") as f:
+            credentials_info = json.load(f)
         # Define scopes and create the credentials object
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credentials_info, scopes=scopes)
-        
-        # Authorize the client with gspread
         client = gspread.authorize(creds)
         return client
     except Exception as e:
         st.error(f"Error loading credentials: {e}")
         return None
 
+# Fetch data from a Google Sheet
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     client = load_credentials()
     if not client:
@@ -58,76 +56,38 @@ def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
-    main_data = main_data.rename(columns={'Student id': 'Student id'})
+    main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
+    # Merge on Student ID to get EM details
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
 # Function to show student EM data with phone numbers
-# Updated function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
-    # Update required columns based on your provided column names
-    required_columns = ["Student id", "Teachers Name"]
+    required_columns = ["Student ID", "Teachers Name"]
 
-    # Check if all required columns are present
+    # Check if required columns are present
     missing_columns = [col for col in required_columns if col not in data.columns]
     if missing_columns:
         st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
         return  # Exit the function if required columns are missing
 
-    # Determine the correct student name column based on available columns
+    # Determine the correct student name column
     student_column = "Student" if "Student" in data.columns else None
     if not student_column:
         st.error("Student name column not found.")
         return
 
-    # Attempt to filter and display data for students assigned to the teacher
+    # Filter and display table
     try:
-        student_em_table = data[data["Teachers Name"] == teacher_name][["Student id", student_column, "Teachers Name"]].drop_duplicates()
+        student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "Teachers Name"]].drop_duplicates()
         st.subheader("List of Students Assigned to Teacher")
         st.write(student_em_table)
     except KeyError as e:
         st.error(f"Error accessing data: {e}")
 
-
-# Function to calculate salary
-def calculate_salary(row):
-    student_id = row['Student ID'].strip().lower()
-    syllabus = row['Syllabus'].strip().lower()
-    class_type = row['Type of class'].strip().lower()
-    hours = row['Hr']
-
-    if 'demo class i - x' in student_id:
-        return hours * 150
-    elif 'demo class xi - xii' in student_id:
-        return hours * 180
-    elif class_type.startswith("paid"):
-        return hours * 4 * 100
-    else:
-        class_level = int(row['Class']) if row['Class'].isdigit() else None
-        if syllabus in ['igcse', 'ib']:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * 120
-                elif 5 <= class_level <= 7:
-                    return hours * 150
-                elif 8 <= class_level <= 10:
-                    return hours * 170
-                elif 11 <= class_level <= 13:
-                    return hours * 200
-        else:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * 120
-                elif 5 <= class_level <= 10:
-                    return hours * 150
-                elif 11 <= class_level <= 12:
-                    return hours * 180
-    return 0
-
-# Optimized function to display filtered data based on the role (Student or Teacher)
-# Optimized function to display filtered data based on the role (Student or Teacher)
+# Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     # Define required columns based on role
     if role == "Student":
@@ -163,31 +123,6 @@ def show_filtered_data(filtered_data, role):
         # Total hours summary for the teacher
         total_hours = filtered_data["Hr"].sum()
         st.write(f"**Total Hours:** {total_hours:.2f}")
-
-# Function to show teacher's weekly schedule from the schedule sheet
-def show_teacher_schedule(teacher_id):
-    st.subheader("Your Weekly Schedule")
-    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    schedule_data = pd.DataFrame()
-
-    for day in days:
-        try:
-            day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
-            if day_data.empty or not {"Teacher ID", "Time Slot", "Student ID"}.issubset(day_data.columns):
-                st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID")
-                continue
-
-            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
-            day_data['Day'] = day
-            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
-        except Exception as e:
-            st.error(f"Error loading {day} schedule: {e}")
-
-    if not schedule_data.empty:
-        schedule_pivot = schedule_data.pivot(index="Time Slot", columns="Day", values="Student ID").reindex(columns=days)
-        st.write(schedule_pivot)
-    else:
-        st.write("No schedule found for this teacher.")
 
 # Main function to handle user role selection and page display
 def main():
@@ -247,9 +182,6 @@ def manage_data(data, role):
                 
                 # Show EM data with phone numbers
                 show_student_em_table(data, teacher_name)
-                
-                # Show teacher's weekly schedule
-                show_teacher_schedule(teacher_id)
             else:
                 st.error("Verification failed. Please check your details.")
 
