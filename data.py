@@ -28,7 +28,6 @@ def load_credentials():
         st.error(f"Error loading credentials: {e}")
         return None
 
-# Fetch data from a Google Sheet without a timeout parameter
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     client = load_credentials()
     if not client:
@@ -55,55 +54,25 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         return pd.DataFrame()
 
 # Function to merge student and EM data
-# Function to merge student and EM data with debug information
 def get_merged_data_with_em():
-    # Fetch data from sheets
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
-    # Print column names for debugging
-    st.write("Main data columns:", main_data.columns.tolist())
-    st.write("EM data columns:", em_data.columns.tolist())
-    
-    # Normalize column names to ensure consistency
-    main_data = main_data.rename(columns={'Student id': 'Student ID', 'Teachers name': 'Teachers Name'})
+    main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
-    # Check if required columns are present before merging
-    missing_main_columns = [col for col in ['Student ID', 'Teachers Name'] if col not in main_data.columns]
-    missing_em_columns = [col for col in ['Student ID', 'EM', 'Phone Number'] if col not in em_data.columns]
-    
-    if missing_main_columns:
-        st.error(f"Missing columns in 'Student class details' sheet: {', '.join(missing_main_columns)}")
-        return pd.DataFrame()  # Return an empty DataFrame if columns are missing
-    if missing_em_columns:
-        st.error(f"Missing columns in 'Student Data' sheet: {', '.join(missing_em_columns)}")
-        return pd.DataFrame()  # Return an empty DataFrame if columns are missing
-    
-    # Merge the data
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
-# Function to show student EM data with phone numbers and improved error handling
+# Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
-    required_columns = ["Student ID", "Teachers Name", "EM", "Phone Number"]
-    
-    # Check for missing columns
-    missing_columns = [col for col in required_columns if col not in data.columns]
-    if missing_columns:
-        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
-        return  # Exit the function if required columns are missing
-
-    # Check for student column name and adjust if needed
-    if "Student Name" in data.columns:
-        student_column = "Student Name"
-    elif "Student" in data.columns:
+    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
+    if "Student" in data.columns:
         student_column = "Student"
     else:
         st.error("Student name column not found.")
         return
 
-    # Filter and display data
     student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
     st.write(student_em_table)
 
@@ -143,16 +112,7 @@ def calculate_salary(row):
     return 0
 
 # Optimized function to display filtered data based on the role (Student or Teacher)
-# Optimized function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
-    required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
-    
-    # Check for missing columns
-    missing_columns = [col for col in required_columns if col not in filtered_data.columns]
-    if missing_columns:
-        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
-        return  # Exit the function if required columns are missing
-
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
@@ -182,7 +142,6 @@ def show_filtered_data(filtered_data, role):
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
-
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
