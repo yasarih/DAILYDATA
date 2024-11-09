@@ -65,16 +65,31 @@ def get_merged_data_with_em():
     return merged_data
 
 # Function to show student EM data with phone numbers
+# Updated function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
-    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-    if "Student" in data.columns:
-        student_column = "Student"
-    else:
+    # Update required columns based on your provided column names
+    required_columns = ["Student id", "Teachers Name"]
+
+    # Check if all required columns are present
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
+        return  # Exit the function if required columns are missing
+
+    # Determine the correct student name column based on available columns
+    student_column = "Student" if "Student" in data.columns else None
+    if not student_column:
         st.error("Student name column not found.")
         return
 
-    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
-    st.write(student_em_table)
+    # Attempt to filter and display data for students assigned to the teacher
+    try:
+        student_em_table = data[data["Teachers Name"] == teacher_name][["Student id", student_column, "Teachers Name"]].drop_duplicates()
+        st.subheader("List of Students Assigned to Teacher")
+        st.write(student_em_table)
+    except KeyError as e:
+        st.error(f"Error accessing data: {e}")
+
 
 # Function to calculate salary
 def calculate_salary(row):
