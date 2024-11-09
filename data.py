@@ -23,28 +23,22 @@ def load_credentials_from_secrets():
 
 # Function to connect to Google Sheets using the credentials from secrets for the new project
 def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    # Load the credentials from Streamlit secrets
     credentials_info = load_credentials_from_secrets()
     if not credentials_info:
         return None
     
-    # Define the required scopes for Google Sheets API
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/drive.file"
     ]
     
-    # Create credentials using the loaded info and defined scopes
     try:
         credentials = Credentials.from_service_account_info(
             credentials_info,
             scopes=scopes
         )
-        # Authorize gspread with the credentials
         client = gspread.authorize(credentials)
-        
-        # Attempt to open the specified worksheet by spreadsheet ID
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
     except gspread.exceptions.SpreadsheetNotFound:
@@ -72,6 +66,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
             df.ffill(inplace=True)
             if 'Hr' in df.columns:
                 df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
+            st.write(f"Columns in '{worksheet_name}' sheet: {df.columns.tolist()}")  # Debugging output
             return df
         else:
             st.warning(f"No data found in worksheet '{worksheet_name}'.")
@@ -84,7 +79,6 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 
 # Function to merge student and EM data
 def get_merged_data_with_em():
-    # Use the spreadsheet ID instead of name
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
@@ -99,10 +93,8 @@ def get_merged_data_with_em():
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
+    st.write("Merged data columns:", merged_data.columns.tolist())  # Debugging output
     return merged_data
-
-# The rest of the code remains the same...
-
 
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
@@ -151,7 +143,7 @@ def calculate_salary(row):
                     return hours * 180
     return 0
 
-# Optimized function to display filtered data based on the role (Student or Teacher)
+# Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
@@ -208,30 +200,16 @@ def show_teacher_schedule(teacher_id):
     else:
         st.write("No schedule found for this teacher.")
 
-# Main function to handle user role selection and page display
-def main():
-    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
-    st.title("Angle Belearn: Your Daily Class Insights")
-
-    if "data" not in st.session_state:
-        st.session_state.data = get_merged_data_with_em()
-
-    role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
-
-    if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
-    
-    if role != "Select":
-        manage_data(st.session_state.data, role)
-    else:
-        st.info("Please select a role from the sidebar.")
-
+# Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
+    st.write("Available columns in data:", data.columns.tolist())  # Display columns in the data for debugging
+
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
     else:
-        st.warning("Month data ('MM' column) not found.")
+        st.warning("Month data ('MM' column) not found. Available columns are:")
+        st.write(data.columns.tolist())
         return
 
     if role == "Student":
@@ -271,6 +249,24 @@ def manage_data(data, role):
                 show_teacher_schedule(teacher_id)
             else:
                 st.error("Verification failed. Please check your details.")
+
+# Main function to handle user role selection and page display
+def main():
+    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
+    st.title("Angle Belearn: Your Daily Class Insights")
+
+    if "data" not in st.session_state:
+        st.session_state.data = get_merged_data_with_em()
+
+    role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
+
+    if st.sidebar.button("Refresh Data"):
+        st.session_state.data = get_merged_data_with_em()
+    
+    if role != "Select":
+        manage_data(st.session_state.data, role)
+    else:
+        st.info("Please select a role from the sidebar.")
 
 if __name__ == "__main__":
     main()
