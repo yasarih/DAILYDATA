@@ -113,7 +113,16 @@ def calculate_salary(row):
     return 0
 
 # Optimized function to display filtered data based on the role (Student or Teacher)
+# Optimized function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
+    required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
+    
+    # Check for missing columns
+    missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+    if missing_columns:
+        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
+        return  # Exit the function if required columns are missing
+
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
@@ -143,6 +152,7 @@ def show_filtered_data(filtered_data, role):
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
+
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
