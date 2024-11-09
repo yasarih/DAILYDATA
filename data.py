@@ -65,30 +65,16 @@ def get_merged_data_with_em():
     return merged_data
 
 # Function to show student EM data with phone numbers
-# Function to show student EM data with phone numbers and improved error handling
-# Function to show student EM data with phone numbers and improved error handling
 def show_student_em_table(data, teacher_name):
-    required_columns = ["Student ID", "Teachers Name", "EM", "Phone Number"]
-
-    # Check if all required columns are present
-    missing_columns = [col for col in required_columns if col not in data.columns]
-    if missing_columns:
-        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
-        return  # Exit the function if required columns are missing
-
-    # Determine the correct student name column
-    student_column = "Student Name" if "Student Name" in data.columns else "Student" if "Student" in data.columns else None
-    if not student_column:
+    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
+    if "Student" in data.columns:
+        student_column = "Student"
+    else:
         st.error("Student name column not found.")
         return
 
-    # Filter data and display table with only the required columns
-    try:
-        student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
-        st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-        st.write(student_em_table)
-    except KeyError as e:
-        st.error(f"Error accessing data: {e}")
+    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
+    st.write(student_em_table)
 
 # Function to calculate salary
 def calculate_salary(row):
@@ -126,26 +112,9 @@ def calculate_salary(row):
     return 0
 
 # Optimized function to display filtered data based on the role (Student or Teacher)
-# Optimized function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
-    # Define required columns based on role
     if role == "Student":
-        required_columns = ["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]
-    else:  # role == "Teacher"
-        required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
-
-    # Debug: Print columns available in filtered_data
-    st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
-    
-    # Find missing columns and report them if any
-    missing_columns = [col for col in required_columns if col not in filtered_data.columns]
-    if missing_columns:
-        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
-        return  # Exit the function if required columns are missing
-
-    # Filter data based on role and display
-    if role == "Student":
-        filtered_data = filtered_data[required_columns]
+        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
 
         total_hours = filtered_data["Hr"].sum()
@@ -156,7 +125,7 @@ def show_filtered_data(filtered_data, role):
         st.write(filtered_data)
 
     elif role == "Teacher":
-        filtered_data = filtered_data[required_columns]
+        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
         st.subheader("Daily Class Data")
@@ -173,7 +142,6 @@ def show_filtered_data(filtered_data, role):
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
-
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
