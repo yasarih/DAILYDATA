@@ -55,17 +55,36 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         return pd.DataFrame()
 
 # Function to merge student and EM data
+# Function to merge student and EM data with debug information
 def get_merged_data_with_em():
+    # Fetch data from sheets
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
-    # Rename columns to ensure consistency
+    # Print column names for debugging
+    st.write("Main data columns:", main_data.columns.tolist())
+    st.write("EM data columns:", em_data.columns.tolist())
+    
+    # Normalize column names to ensure consistency
     main_data = main_data.rename(columns={'Student id': 'Student ID', 'Teachers name': 'Teachers Name'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
+    # Check if required columns are present before merging
+    missing_main_columns = [col for col in ['Student ID', 'Teachers Name'] if col not in main_data.columns]
+    missing_em_columns = [col for col in ['Student ID', 'EM', 'Phone Number'] if col not in em_data.columns]
+    
+    if missing_main_columns:
+        st.error(f"Missing columns in 'Student class details' sheet: {', '.join(missing_main_columns)}")
+        return pd.DataFrame()  # Return an empty DataFrame if columns are missing
+    if missing_em_columns:
+        st.error(f"Missing columns in 'Student Data' sheet: {', '.join(missing_em_columns)}")
+        return pd.DataFrame()  # Return an empty DataFrame if columns are missing
+    
+    # Merge the data
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
+# Function to show student EM data with phone numbers and improved error handling
 def show_student_em_table(data, teacher_name):
     required_columns = ["Student ID", "Teachers Name", "EM", "Phone Number"]
     
