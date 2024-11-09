@@ -46,9 +46,11 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
         # Open the spreadsheet and access the specified worksheet
         sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
         return sheet
+    except gspread.exceptions.APIError as api_error:
+        st.error(f"Google Sheets API error: {api_error}")
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
-        return None
+    return None
 
 # Function to fetch all data without caching to always get updated values
 def fetch_data_from_sheet(spreadsheet_name, worksheet_name):
@@ -70,19 +72,24 @@ def fetch_data_from_sheet(spreadsheet_name, worksheet_name):
         else:
             st.warning(f"No data found in worksheet '{worksheet_name}'.")
             return pd.DataFrame()
+    except gspread.exceptions.APIError as api_error:
+        st.error(f"Google Sheets API error fetching data from '{worksheet_name}': {api_error}")
     except Exception as e:
         st.error(f"Error fetching data from '{worksheet_name}': {e}")
-        return pd.DataFrame()
+    return pd.DataFrame()
 
 # Function to merge student and EM data
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
+    if main_data.empty:
+        st.warning("Main data is empty. Please check the 'Student class details' sheet.")
+    if em_data.empty:
+        st.warning("EM data is empty. Please check the 'Student Data' sheet.")
     if main_data.empty or em_data.empty:
-        st.warning("One or both data sources are empty, unable to merge data.")
         return pd.DataFrame()
-    
+
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
