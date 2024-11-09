@@ -22,7 +22,7 @@ def load_credentials_from_secrets():
         return None
 
 # Function to connect to Google Sheets using the credentials from secrets for the new project
-def connect_to_google_sheets(spreadsheet_name, worksheet_name):
+def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     # Load the credentials from Streamlit secrets
     credentials_info = load_credentials_from_secrets()
     if not credentials_info:
@@ -44,11 +44,11 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
         # Authorize gspread with the credentials
         client = gspread.authorize(credentials)
         
-        # Attempt to open the specified worksheet
-        sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
+        # Attempt to open the specified worksheet by spreadsheet ID
+        sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
     except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet '{spreadsheet_name}' not found. Check the spreadsheet name and permissions.")
+        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
     except gspread.exceptions.WorksheetNotFound:
         st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
     except Exception as e:
@@ -56,8 +56,8 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
     return None
 
 # Function to fetch all data without caching to always get updated values
-def fetch_data_from_sheet(spreadsheet_name, worksheet_name):
-    sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
+def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
+    sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
         st.warning(f"Could not establish a connection to the worksheet '{worksheet_name}'.")
         return pd.DataFrame()  # Return empty DataFrame if connection fails
@@ -84,6 +84,7 @@ def fetch_data_from_sheet(spreadsheet_name, worksheet_name):
 
 # Function to merge student and EM data
 def get_merged_data_with_em():
+    # Use the spreadsheet ID instead of name
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
@@ -99,6 +100,9 @@ def get_merged_data_with_em():
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
+
+# The rest of the code remains the same...
+
 
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
