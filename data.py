@@ -50,6 +50,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     return None
 
 # Function to fetch all data without caching to always get updated values
+# Function to fetch all data without caching to always get updated values
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
@@ -66,7 +67,6 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
             df.ffill(inplace=True)
             if 'Hr' in df.columns:
                 df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
-            st.write(f"Columns in '{worksheet_name}' sheet: {df.columns.tolist()}")  # Debugging output
             return df
         else:
             st.warning(f"No data found in worksheet '{worksheet_name}'.")
@@ -93,8 +93,8 @@ def get_merged_data_with_em():
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
-    st.write("Merged data columns:", merged_data.columns.tolist())  # Debugging output
     return merged_data
+
 
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
