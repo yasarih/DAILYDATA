@@ -59,14 +59,13 @@ def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
     
-    main_data = main_data.rename(columns={'Student id': 'Student ID'})
+    # Rename columns to ensure consistency
+    main_data = main_data.rename(columns={'Student id': 'Student ID', 'Teachers name': 'Teachers Name'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
-# Function to show student EM data with phone numbers
-# Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
     required_columns = ["Student ID", "Teachers Name", "EM", "Phone Number"]
     
