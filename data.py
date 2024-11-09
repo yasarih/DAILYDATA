@@ -203,7 +203,7 @@ def show_teacher_schedule(teacher_id):
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
-    st.write("Available columns in data:", data.columns.tolist())  # Display columns in the data for debugging
+    #st.write("Available columns in data:", data.columns.tolist())  # Display columns in the data for debugging
 
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
