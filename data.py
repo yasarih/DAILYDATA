@@ -43,19 +43,23 @@ def connect_to_google_sheets(spreadsheet_name, worksheet_name):
         )
         # Authorize gspread with the credentials
         client = gspread.authorize(credentials)
-        # Open the spreadsheet and access the specified worksheet
+        
+        # Attempt to open the specified worksheet
         sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
         return sheet
-    except gspread.exceptions.APIError as api_error:
-        st.error(f"Google Sheets API error: {api_error}")
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(f"Spreadsheet '{spreadsheet_name}' not found. Check the spreadsheet name and permissions.")
+    except gspread.exceptions.WorksheetNotFound:
+        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
     except Exception as e:
-        st.error(f"Error connecting to Google Sheets: {e}")
+        st.error(f"Unexpected error connecting to Google Sheets: {e}")
     return None
 
 # Function to fetch all data without caching to always get updated values
 def fetch_data_from_sheet(spreadsheet_name, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_name, worksheet_name)
     if not sheet:
+        st.warning(f"Could not establish a connection to the worksheet '{worksheet_name}'.")
         return pd.DataFrame()  # Return empty DataFrame if connection fails
     try:
         data = sheet.get_all_values()
