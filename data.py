@@ -66,14 +66,26 @@ def get_merged_data_with_em():
     return merged_data
 
 # Function to show student EM data with phone numbers
+# Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
-    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-    if "Student" in data.columns:
+    required_columns = ["Student ID", "Teachers Name", "EM", "Phone Number"]
+    
+    # Check for missing columns
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        st.error(f"The following required columns are missing from the data: {', '.join(missing_columns)}")
+        return  # Exit the function if required columns are missing
+
+    # Check for student column name and adjust if needed
+    if "Student Name" in data.columns:
+        student_column = "Student Name"
+    elif "Student" in data.columns:
         student_column = "Student"
     else:
         st.error("Student name column not found.")
         return
 
+    # Filter and display data
     student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
     st.write(student_em_table)
 
