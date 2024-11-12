@@ -50,7 +50,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     return None
 
 # Function to fetch all data without caching to always get updated values
-# Function to fetch all data without caching to always get updated values
+@st.cache_data(show_spinner=False, allow_output_mutation=True)
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
@@ -78,6 +78,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     return pd.DataFrame()
 
 # Function to merge student and EM data
+@st.cache_data(show_spinner=False, allow_output_mutation=True)
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
     em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
@@ -95,18 +96,9 @@ def get_merged_data_with_em():
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
-
-# Function to show student EM data with phone numbers
-def show_student_em_table(data, teacher_name):
-    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-    if "Student" in data.columns:
-        student_column = "Student"
-    else:
-        st.error("Student name column not found.")
-        return
-
-    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
-    st.write(student_em_table)
+# Updated function for managing the refresh button
+def refresh_data():
+    st.session_state.data = get_merged_data_with_em()
 
 # Function to calculate salary
 def calculate_salary(row):
@@ -160,9 +152,13 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
-        st.subheader("Daily Class Data")
-        st.write(filtered_data)  
-
+        # Identify duplicate entries by teacher for a student on the same day
+        filtered_data['Duplicate Entry'] = filtered_data.duplicated(subset=["Date", "Student ID", "Teachers Name"], keep=False)
+        
+        st.subheader("Daily Class Data (Duplicates Highlighted)")
+        st.write(filtered_data.style.apply(lambda x: ['background-color: yellow' if x['Duplicate Entry'] else '' for i in x], axis=1))
+        
+        # Salary calculation and summary
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
         total_hours = filtered_data["Hr"].sum()
@@ -175,94 +171,22 @@ def show_filtered_data(filtered_data, role):
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
 
-# Function to show teacher's weekly schedule from the schedule sheet
-def show_teacher_schedule(teacher_id):
-    st.subheader("Your Weekly Schedule")
-    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    schedule_data = pd.DataFrame()
-
-    for day in days:
-        try:
-            day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
-            if day_data.empty or not {"Teacher ID", "Time Slot", "Student ID"}.issubset(day_data.columns):
-                st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID")
-                continue
-
-            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
-            day_data['Day'] = day
-            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
-        except Exception as e:
-            st.error(f"Error loading {day} schedule: {e}")
-
-    if not schedule_data.empty:
-        schedule_pivot = schedule_data.pivot(index="Time Slot", columns="Day", values="Student ID").reindex(columns=days)
-        st.write(schedule_pivot)
-    else:
-        st.write("No schedule found for this teacher.")
-
-# Function to manage data based on the selected role
-def manage_data(data, role):
-    st.subheader(f"{role} Data")
-    #st.write("Available columns in data:", data.columns.tolist())  # Display columns in the data for debugging
-
-    if "MM" in data.columns:
-        month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
-    else:
-        st.warning("Month data ('MM' column) not found. Available columns are:")
-        st.write(data.columns.tolist())
-        return
-
-    if role == "Student":
-        student_id = st.text_input("Enter Student ID").strip().lower()
-        student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
-
-        if st.button("Verify Student"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Student ID"].str.lower().str.strip() == student_id) & 
-                                 (data["Student"].str.lower().str.contains(student_name_part))]
-            
-            if not filtered_data.empty:
-                show_filtered_data(filtered_data, role)
-            else:
-                st.error("Verification failed. Please check your details.")
-
-    elif role == "Teacher":
-        teacher_id = st.text_input("Enter Teacher ID").strip().lower()
-        teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
-
-        if st.button("Verify Teacher"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                 (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-            
-            if not filtered_data.empty:
-                teacher_name = filtered_data["Teachers Name"].iloc[0]
-                st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
-                
-                # Show filtered data and other relevant details
-                show_filtered_data(filtered_data, role)
-                
-                # Show EM data with phone numbers
-                show_student_em_table(data, teacher_name)
-                
-                # Show teacher's weekly schedule
-                show_teacher_schedule(teacher_id)
-            else:
-                st.error("Verification failed. Please check your details.")
-
 # Main function to handle user role selection and page display
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
     st.title("Angle Belearn: Your Daily Class Insights")
 
-    if "data" not in st.session_state:
+    # Refresh button to force data update
+    if st.sidebar.button("Refresh Data", on_click=refresh_data):
+        refresh_data()
+
+    # If no data is loaded, fetch it
+    if "data" not in st.session_state or st.session_state.data.empty:
         st.session_state.data = get_merged_data_with_em()
 
+    # Role selection and data management
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
-    if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
-    
     if role != "Select":
         manage_data(st.session_state.data, role)
     else:
