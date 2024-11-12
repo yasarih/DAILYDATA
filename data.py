@@ -62,6 +62,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
             df = pd.DataFrame(data[1:], columns=headers)
             df.replace('', pd.NA, inplace=True)
             df.ffill(inplace=True)
+            df.columns = df.columns.str.strip()  # Ensure column names have no extra spaces
             if 'Hr' in df.columns:
                 df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
             return df
@@ -91,7 +92,6 @@ def get_merged_data_with_em():
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
-
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
     st.subheader("List of Students with Corresponding EM and EM's Phone Number")
