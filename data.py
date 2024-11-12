@@ -2,7 +2,6 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-import numpy as np
 import json
 
 # Set page layout and title
@@ -48,8 +47,6 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Unexpected error connecting to Google Sheets: {e}")
     return None
-
-# Function to fetch all data without caching to always get updated values
 # Function to fetch all data without caching to always get updated values
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
@@ -94,8 +91,6 @@ def get_merged_data_with_em():
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
-
-
 
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
@@ -276,8 +271,9 @@ def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
     st.title("Angle Belearn: Your Daily Class Insights")
 
-    # Refresh button to force data update with unique session key to clear cache
+    # Refresh button to force data update
     if st.sidebar.button("Refresh Data"):
+        # Clear any existing data to force reload
         if "data" in st.session_state:
             del st.session_state["data"]
 
