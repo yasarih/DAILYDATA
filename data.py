@@ -145,12 +145,14 @@ def calculate_salary(row):
     return 0
 # Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
+    # Define required columns for duplicate check and print available columns for debugging
     required_columns = ["Date", "Student ID", "Teachers Name"]
-    
-    # Check if required columns exist for duplicate identification
+    st.write("Available columns in filtered data:", filtered_data.columns.tolist())  # Debugging line
+
+    # Check for the required columns in the dataframe
     missing_columns = [col for col in required_columns if col not in filtered_data.columns]
     if missing_columns:
-        st.error(f"Missing columns in data for duplicate check: {', '.join(missing_columns)}.")
+        st.error(f"Cannot perform duplicate check. Missing columns: {', '.join(missing_columns)}.")
         return  # Stop further processing if required columns are missing
     
     if role == "Student":
@@ -169,8 +171,12 @@ def show_filtered_data(filtered_data, role):
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
         # Identify duplicate entries by teacher for a student on the same day
-        filtered_data['Duplicate Entry'] = filtered_data.duplicated(subset=["Date", "Student ID", "Teachers Name"], keep=False)
-        
+        try:
+            filtered_data['Duplicate Entry'] = filtered_data.duplicated(subset=["Date", "Student ID", "Teachers Name"], keep=False)
+        except KeyError as e:
+            st.error(f"Error identifying duplicates: {e}")
+            return  # Stop processing if there's a KeyError
+
         st.subheader("Daily Class Data (Duplicates Highlighted)")
         st.write(filtered_data.style.apply(lambda x: ['background-color: yellow' if x['Duplicate Entry'] else '' for i in x], axis=1))
         
