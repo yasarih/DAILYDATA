@@ -145,6 +145,14 @@ def calculate_salary(row):
     return 0
 # Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
+    required_columns = ["Date", "Student ID", "Teachers Name"]
+    
+    # Check if required columns exist for duplicate identification
+    missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+    if missing_columns:
+        st.error(f"Missing columns in data for duplicate check: {', '.join(missing_columns)}.")
+        return  # Stop further processing if required columns are missing
+    
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
