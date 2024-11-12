@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+import numpy as np
 import json
 
 # Set page layout and title
@@ -47,6 +48,8 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Unexpected error connecting to Google Sheets: {e}")
     return None
+
+# Function to fetch all data without caching to always get updated values
 # Function to fetch all data without caching to always get updated values
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
@@ -62,7 +65,6 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
             df = pd.DataFrame(data[1:], columns=headers)
             df.replace('', pd.NA, inplace=True)
             df.ffill(inplace=True)
-            df.columns = df.columns.str.strip()  # Ensure column names have no extra spaces
             if 'Hr' in df.columns:
                 df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
             return df
@@ -92,6 +94,8 @@ def get_merged_data_with_em():
 
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
+
+
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
     st.subheader("List of Students with Corresponding EM and EM's Phone Number")
@@ -138,21 +142,9 @@ def calculate_salary(row):
                 elif 11 <= class_level <= 12:
                     return hours * 180
     return 0
+
 # Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
-    # Clean column names to ensure consistency
-    filtered_data.columns = filtered_data.columns.str.strip()  # Remove any leading/trailing spaces
-
-    # Define required columns for duplicate check and print available columns for debugging
-    required_columns = ["Date", "Student ID", "Teachers Name"]
-    st.write("Available columns in filtered data:", filtered_data.columns.tolist())  # Debugging line
-
-    # Check for the required columns in the dataframe
-    missing_columns = [col for col in required_columns if col not in filtered_data.columns]
-    if missing_columns:
-        st.error(f"Cannot perform duplicate check. Missing columns: {', '.join(missing_columns)}.")
-        return  # Stop further processing if required columns are missing
-    
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
@@ -168,17 +160,9 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
-        # Identify duplicate entries by teacher for a student on the same day
-        try:
-            filtered_data['Duplicate Entry'] = filtered_data.duplicated(subset=["Date", "Student ID", "Teachers Name"], keep=False)
-        except KeyError as e:
-            st.error(f"Error identifying duplicates: {e}")
-            return  # Stop processing if there's a KeyError
+        st.subheader("Daily Class Data")
+        st.write(filtered_data)  
 
-        st.subheader("Daily Class Data (Duplicates Highlighted)")
-        st.write(filtered_data.style.apply(lambda x: ['background-color: yellow' if x['Duplicate Entry'] else '' for i in x], axis=1))
-        
-        # Salary calculation and summary
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
         total_hours = filtered_data["Hr"].sum()
@@ -271,19 +255,14 @@ def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
     st.title("Angle Belearn: Your Daily Class Insights")
 
-    # Refresh button to force data update
-    if st.sidebar.button("Refresh Data"):
-        # Clear any existing data to force reload
-        if "data" in st.session_state:
-            del st.session_state["data"]
-
-    # If no data is loaded or refresh button was clicked, fetch new data
     if "data" not in st.session_state:
         st.session_state.data = get_merged_data_with_em()
 
-    # Role selection and data management
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
+    if st.sidebar.button("Refresh Data"):
+        st.session_state.data = get_merged_data_with_em()
+    
     if role != "Select":
         manage_data(st.session_state.data, role)
     else:
