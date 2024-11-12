@@ -261,7 +261,12 @@ def main():
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
     if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
+    # Clears cached data, forcing a fresh fetch
+    if "data" in st.session_state:
+        del st.session_state["data"]
+    st.session_state.data = get_merged_data_with_em()  # Fetches the latest data from Google Sheets
+    st.success("Data refreshed successfully!")
+
     
     if role != "Select":
         manage_data(st.session_state.data, role)
