@@ -145,6 +145,9 @@ def calculate_salary(row):
     return 0
 # Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
+    # Clean column names to ensure consistency
+    filtered_data.columns = filtered_data.columns.str.strip()  # Remove any leading/trailing spaces
+
     # Define required columns for duplicate check and print available columns for debugging
     required_columns = ["Date", "Student ID", "Teachers Name"]
     st.write("Available columns in filtered data:", filtered_data.columns.tolist())  # Debugging line
