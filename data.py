@@ -255,23 +255,27 @@ def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
     st.title("Angle Belearn: Your Daily Class Insights")
 
+    # Load data if not already in session state
     if "data" not in st.session_state:
         st.session_state.data = get_merged_data_with_em()
 
+    # Sidebar role selection
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
+    # Refresh Data button in sidebar
     if st.sidebar.button("Refresh Data"):
-    # Clears cached data, forcing a fresh fetch
-    if "data" in st.session_state:
-        del st.session_state["data"]
-    st.session_state.data = get_merged_data_with_em()  # Fetches the latest data from Google Sheets
-    st.success("Data refreshed successfully!")
+        # Clears cached data, forcing a fresh fetch
+        if "data" in st.session_state:
+            del st.session_state["data"]
+        st.session_state.data = get_merged_data_with_em()  # Fetches the latest data from Google Sheets
+        st.success("Data refreshed successfully!")
 
-    
+    # Manage data display based on selected role
     if role != "Select":
         manage_data(st.session_state.data, role)
     else:
         st.info("Please select a role from the sidebar.")
+
 
 if __name__ == "__main__":
     main()
