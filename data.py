@@ -96,6 +96,7 @@ def get_merged_data_with_em():
     return merged_data
 
 
+
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
     st.subheader("List of Students with Corresponding EM and EM's Phone Number")
@@ -142,7 +143,6 @@ def calculate_salary(row):
                 elif 11 <= class_level <= 12:
                     return hours * 180
     return 0
-
 # Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Student":
@@ -160,9 +160,13 @@ def show_filtered_data(filtered_data, role):
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
         
-        st.subheader("Daily Class Data")
-        st.write(filtered_data)  
-
+        # Identify duplicate entries by teacher for a student on the same day
+        filtered_data['Duplicate Entry'] = filtered_data.duplicated(subset=["Date", "Student ID", "Teachers Name"], keep=False)
+        
+        st.subheader("Daily Class Data (Duplicates Highlighted)")
+        st.write(filtered_data.style.apply(lambda x: ['background-color: yellow' if x['Duplicate Entry'] else '' for i in x], axis=1))
+        
+        # Salary calculation and summary
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
         total_hours = filtered_data["Hr"].sum()
@@ -255,14 +259,18 @@ def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
     st.title("Angle Belearn: Your Daily Class Insights")
 
+    # Refresh button to force data update with unique session key to clear cache
+    if st.sidebar.button("Refresh Data"):
+        if "data" in st.session_state:
+            del st.session_state["data"]
+
+    # If no data is loaded or refresh button was clicked, fetch new data
     if "data" not in st.session_state:
         st.session_state.data = get_merged_data_with_em()
 
+    # Role selection and data management
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
-    if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
-    
     if role != "Select":
         manage_data(st.session_state.data, role)
     else:
