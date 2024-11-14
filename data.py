@@ -155,28 +155,61 @@ def calculate_salary(row):
     return 0
 
 # Function to display filtered data based on the role (Student or Teacher)
+def highlight_duplicates_html(df, subset_columns):
+    # Identify duplicate rows based on specified columns
+    df['is_duplicate'] = df.duplicated(subset=subset_columns, keep=False)
+    
+    # Start building an HTML table with conditional cell styling
+    styled_table = "<style> .highlight-cell { background-color: red; color: white; } </style>"
+    styled_table += '<table border="1" class="dataframe">'
+
+    # Add table headers
+    styled_table += '<thead><tr style="text-align: right;">'
+    for column in df.columns:
+        if column != 'is_duplicate':  # Exclude helper column
+            styled_table += f'<th>{column}</th>'
+    styled_table += '</tr></thead>'
+
+    # Add table rows with conditional cell highlighting
+    styled_table += '<tbody>'
+    for _, row in df.iterrows():
+        styled_table += '<tr>'
+        for col in df.columns:
+            if col != 'is_duplicate':  # Exclude helper column
+                cell_value = row[col]
+                # Apply red background if the row is marked as duplicate
+                cell_class = 'highlight-cell' if row['is_duplicate'] else ''
+                styled_table += f'<td class="{cell_class}">{cell_value}</td>'
+        styled_table += '</tr>'
+    styled_table += '</tbody></table>'
+
+    return styled_table
+
+# Example usage inside the show_filtered_data function
 def show_filtered_data(filtered_data, role):
-    if role == "Student":
-        filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
-
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours of Classes:** {total_hours:.2f}")
-        subject_hours = filtered_data.groupby("Subject")["Hr"].sum()
-        st.write("**Subject-wise Hours:**")
-        st.write(subject_hours)  
-        st.write(filtered_data)
-
-    elif role == "Teacher":
+    if role == "Teacher":
+        # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
 
-        # Identify duplicate student entries on the same day by the same teacher
-        filtered_data['Duplicate'] = filtered_data.duplicated(subset=["Date", "Student ID"], keep=False)
+        # Apply cell highlighting for duplicates in "Date" and "Student ID" columns
+        styled_table_html = highlight_duplicates_html(filtered_data, subset_columns=["Date", "Student ID"])
+        
+        st.subheader("Daily Class Data")
+        st.markdown(styled_table_html, unsafe_allow_html=True)
 
-        # Add a 'Highlight' column that flags duplicates for display
-        filtered_data['Highlight'] = filtered_data['Duplicate'].apply(lambda x: '🔶' if x else '')
+        # Continue with salary calculations and other operations as before
+        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['Salary'].sum()
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours:** {total_hours:.2f}")
+        st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
 
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
+            'Hr': 'sum', 'Salary': 'sum'
+        }).reset_index()
+        st.subheader("Salary Breakdown by Class and Board")
+        st.write(salary_split)
         # Show the DataFrame with duplicate indication
         st.subheader("Daily Class Data")
         st.write(filtered_data.drop(columns=['Duplicate']))  # Display the table without the 'Duplicate' helper column
