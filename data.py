@@ -5,12 +5,20 @@ import pandas as pd
 import numpy as np
 import json
 
-# Set page layout and title
+# Set page layout, title, and remove menu items
 st.set_page_config(
     page_title="Angle Belearn Insights",
     page_icon="🎓",
-    layout="wide"
+    layout="wide",
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": None
+    }
 )
+
+# Your Streamlit app code goes here
+
 
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
