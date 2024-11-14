@@ -223,6 +223,7 @@ def show_filtered_data(filtered_data, role):
         st.write(salary_split)
 
 # Function to show teacher's weekly schedule from the schedule sheet
+# Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
     st.subheader("Your Weekly Schedule")
     days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -235,6 +236,7 @@ def show_teacher_schedule(teacher_id):
                 st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID")
                 continue
 
+            # Filter by the specified teacher ID
             day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
             day_data['Day'] = day
             schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
@@ -242,10 +244,15 @@ def show_teacher_schedule(teacher_id):
             st.error(f"Error loading {day} schedule: {e}")
 
     if not schedule_data.empty:
+        # Combine duplicate entries by concatenating 'Student ID' with a comma separator
+        schedule_data = schedule_data.groupby(['Time Slot', 'Day'])['Student ID'].apply(lambda x: ', '.join(x)).reset_index()
+
+        # Perform pivot operation after handling duplicates
         schedule_pivot = schedule_data.pivot(index="Time Slot", columns="Day", values="Student ID").reindex(columns=days)
         st.write(schedule_pivot)
     else:
         st.write("No schedule found for this teacher.")
+
 
 # Function to manage data based on the selected role
 def manage_data(data, role):
