@@ -4,7 +4,14 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
 import json
-
+hide_streamlit_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        </style>
+        """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # Set page layout, title, and remove menu items
 st.set_page_config(
     page_title="Angle Belearn Insights",
