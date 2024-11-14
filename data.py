@@ -155,6 +155,9 @@ def calculate_salary(row):
     return 0
 
 # Function to display filtered data based on the role (Student or Teacher)
+import pandas as pd
+
+# Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
@@ -170,10 +173,24 @@ def show_filtered_data(filtered_data, role):
     elif role == "Teacher":
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
+
+        # Identify duplicate student entries on the same day by the same teacher
+        duplicated_rows = filtered_data.duplicated(subset=["Date", "Student ID"], keep=False)
+        filtered_data['Highlight'] = duplicated_rows  # Add a new column to flag duplicates
+
+        # Apply yellow highlighting to rows where 'Highlight' is True
+        def highlight_duplicates(row):
+            if row['Highlight']:
+                return ['background-color: yellow'] * len(row)
+            return [''] * len(row)
+
+        # Remove the 'Highlight' column after styling
+        styled_data = filtered_data.style.apply(highlight_duplicates, axis=1).hide_index()
         
         st.subheader("Daily Class Data")
-        st.write(filtered_data)  
+        st.write(styled_data)  # Display the styled dataframe
 
+        # Calculate and display salary
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
         total_salary = filtered_data['Salary'].sum()
         total_hours = filtered_data["Hr"].sum()
