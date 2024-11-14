@@ -87,7 +87,6 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Error fetching data from '{worksheet_name}': {e}")
     return pd.DataFrame()
-
 # Function to merge student and EM data
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
