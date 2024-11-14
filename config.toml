@@ -5,10 +5,7 @@ base="light"  # or "dark", depending on your theme preference
 headless = true
 
 [ui]
-hide_streamlit_branding = true  # Hides the "Made with Streamlit" branding
+hide_streamlit_branding = true  # This will hide the "Made with Streamlit" branding
 
 [global]
 showWarningOnDirectExecution = false  # Optional, hides warnings about direct execution
-
-[client]
-displayEnabled = false  # Disables the toolbar icons
