@@ -155,7 +155,6 @@ def calculate_salary(row):
     return 0
 
 # Function to display filtered data based on the role (Student or Teacher)
-# Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Student":
         filtered_data = filtered_data[["Date", "Subject", "Chapter taken", "Teachers Name", "Hr", "Type of class"]]
@@ -175,11 +174,25 @@ def show_filtered_data(filtered_data, role):
         # Identify duplicate student entries on the same day by the same teacher
         filtered_data['Duplicate'] = filtered_data.duplicated(subset=["Date", "Student ID"], keep=False)
 
-        # Display DataFrame with duplicate indication
-        st.subheader("Daily Class Data")
-        # Show the DataFrame with a Duplicate flag
-        st.write(filtered_data.style.apply(lambda x: ['background-color: yellow' if x.Duplicate else '' for x in filtered_data.iterrows(),
+        # Add a 'Highlight' column that flags duplicates for display
+        filtered_data['Highlight'] = filtered_data['Duplicate'].apply(lambda x: '🔶' if x else '')
 
+        # Show the DataFrame with duplicate indication
+        st.subheader("Daily Class Data")
+        st.write(filtered_data.drop(columns=['Duplicate']))  # Display the table without the 'Duplicate' helper column
+
+        # Calculate and display salary
+        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
+        total_salary = filtered_data['Salary'].sum()
+        total_hours = filtered_data["Hr"].sum()
+        st.write(f"**Total Hours:** {total_hours:.2f}")
+        st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
+
+        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
+            'Hr': 'sum', 'Salary': 'sum'
+        }).reset_index()
+        st.subheader("Salary Breakdown by Class and Board")
+        st.write(salary_split)
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
