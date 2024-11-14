@@ -186,33 +186,28 @@ def highlight_duplicates_html(df, subset_columns):
     return styled_table
 
 # Example usage inside the show_filtered_data function
+# Function to display filtered data based on the role (Student or Teacher)
 def show_filtered_data(filtered_data, role):
     if role == "Teacher":
         # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
         filtered_data["Hr"] = filtered_data["Hr"].round(2)
 
-        # Apply cell highlighting for duplicates in "Date" and "Student ID" columns
+        # Apply row highlighting for duplicates in "Date" and "Student ID" columns
+        if "Date" in filtered_data.columns and "Student ID" in filtered_data.columns:
+            filtered_data['Duplicate'] = filtered_data.duplicated(subset=["Date", "Student ID"], keep=False)
+        else:
+            st.error("Required columns 'Date' or 'Student ID' not found in the data.")
+            return
+
+        # Generate HTML with highlighting and display in Streamlit
         styled_table_html = highlight_duplicates_html(filtered_data, subset_columns=["Date", "Student ID"])
         
         st.subheader("Daily Class Data")
         st.markdown(styled_table_html, unsafe_allow_html=True)
 
-        # Continue with salary calculations and other operations as before
-        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
-        total_salary = filtered_data['Salary'].sum()
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours:** {total_hours:.2f}")
-        st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
-
-        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
-            'Hr': 'sum', 'Salary': 'sum'
-        }).reset_index()
-        st.subheader("Salary Breakdown by Class and Board")
-        st.write(salary_split)
-        # Show the DataFrame with duplicate indication
-        st.subheader("Daily Class Data")
-        st.write(filtered_data.drop(columns=['Duplicate']))  # Display the table without the 'Duplicate' helper column
+        # Drop the 'Duplicate' column safely if it exists
+        filtered_data = filtered_data.drop(columns=['Duplicate'], errors='ignore')
 
         # Calculate and display salary
         filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
