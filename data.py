@@ -190,7 +190,7 @@ def show_filtered_data(filtered_data, role):
     if role == "Teacher":
         # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
-        filtered_data["Hr"] = filtered_data["Hr"].round(2)
+        filtered_data["Hr"] = filtered_data["Hr"]
 
         # Apply row highlighting for duplicates in "Date" and "Student ID" columns
         if "Date" in filtered_data.columns and "Student ID" in filtered_data.columns:
