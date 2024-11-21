@@ -294,7 +294,7 @@ def manage_data(data, role):
 
                 # Calculate total hours
                 total_hours = filtered_data["Hr"].sum()
-                st.write(f"**Total Hours for {month}:** {total_hours:.2f}")
+                st.write(f"**Total Hours for {month}th month :** {total_hours:.2f}")
 
                 # Subject-wise breakdown
                 subject_hours = filtered_data.groupby("Subject")["Hr"].sum().reset_index()
