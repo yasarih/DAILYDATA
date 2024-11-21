@@ -266,8 +266,8 @@ def manage_data(data, role):
         return
 
     if role == "Teacher":
-    teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
-    teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+        teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+        teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
     if st.button("Verify Teacher"):
         # Filter data based on Teacher ID and partial name match
