@@ -266,7 +266,7 @@ def manage_data(data, role):
         return
 
     if role == "Teacher":
-        if "Teacher ID" not in data.columns:
+        if "Teachers ID" not in data.columns:
             st.error("The column 'Teacher ID' is missing from the data. Please check the source sheet.")
             return
 
@@ -275,7 +275,7 @@ def manage_data(data, role):
 
         if st.button("Verify Teacher"):
             filtered_data = data[(data["MM"] == month) &
-                                 (data["Teacher ID"].str.lower().str.strip() == teacher_id) &
+                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
                                  (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
 
             if not filtered_data.empty:
