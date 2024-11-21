@@ -265,19 +265,41 @@ def manage_data(data, role):
         st.write(data.columns.tolist())
         return
 
-    if role == "Student":
-        student_id = st.text_input("Enter Student ID").strip().lower()
-        student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+   if role == "Student":
+    student_id = st.text_input("Enter Student ID").strip().lower()
+    student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-        if st.button("Verify Student"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Student ID"].str.lower().str.strip() == student_id) & 
-                                 (data["Student"].str.lower().str.contains(student_name_part))]
-            
-            if not filtered_data.empty:
-                show_filtered_data(filtered_data, role)
-            else:
-                st.error("Verification failed. Please check your details.")
+    if st.button("Verify Student"):
+        # Filter data for the selected student
+        filtered_data = data[(data["MM"] == month) &
+                             (data["Student ID"].str.lower().str.strip() == student_id) &
+                             (data["Student"].str.lower().str.contains(student_name_part))]
+
+        if not filtered_data.empty:
+            # Display student's name at the top
+            student_name = filtered_data["Student"].iloc[0]
+            st.subheader(f"👨‍🎓 Welcome, {student_name}!")
+
+            # Select relevant columns for display
+            filtered_data = filtered_data[["Date", "Subject", "Hr", "Teachers Name", "Topic"]]
+            st.subheader("📚 Your Monthly Class Data")
+            st.write(filtered_data)
+
+            # Calculate total hours
+            total_hours = filtered_data["Hr"].sum()
+            st.write(f"**Total Hours for {month}:** {total_hours:.2f}")
+
+            # Subject-wise breakdown
+            subject_hours = filtered_data.groupby("Subject")["Hr"].sum().reset_index()
+            subject_hours = subject_hours.rename(columns={"Hr": "Total Hours"})
+            st.subheader("📊 Subject-wise Hour Breakdown")
+            st.write(subject_hours)
+
+            # Optionally display as a bar chart
+            st.bar_chart(subject_hours.set_index("Subject"))
+        else:
+            st.error("Verification failed. Please check your details.")
+
 
     elif role == "Teacher":
         teacher_id = st.text_input("Enter Teacher ID").strip().lower()
