@@ -256,8 +256,8 @@ def show_teacher_schedule(teacher_id):
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
-    #st.write("Available columns in data:", data.columns.tolist())  # Display columns in the data for debugging
 
+    # Check if 'MM' column exists for month selection
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
     else:
@@ -265,47 +265,74 @@ def manage_data(data, role):
         st.write(data.columns.tolist())
         return
 
-    if role == "Student":
+    if role == "Teacher":
+        teacher_name = st.text_input("Enter Your Name").strip().lower()
+
+        if st.button("Show Teacher Data"):
+            filtered_data = data[(data["MM"] == month) & 
+                                 (data["Teachers Name"].str.lower().str.strip() == teacher_name)]
+
+            if not filtered_data.empty:
+                # Display teacher's name at the top
+                st.subheader(f"👩‍🏫 Welcome, {teacher_name.title()}!")
+
+                # Check if required columns exist
+                required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
+                missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+
+                if missing_columns:
+                    st.error(f"The following required columns are missing: {missing_columns}")
+                    st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
+                else:
+                    # Show filtered data with highlighting duplicates and salary calculations
+                    show_filtered_data(filtered_data, role)
+
+                    # Display teacher's weekly schedule
+                    teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+                    if teacher_id:
+                        show_teacher_schedule(teacher_id)
+            else:
+                st.error("No data found. Please check your name or data for the selected month.")
+
+    elif role == "Student":
         student_id = st.text_input("Enter Student ID").strip().lower()
         student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-    if st.button("Verify Student"):
-        filtered_data = data[(data["MM"] == month) &
-                             (data["Student ID"].str.lower().str.strip() == student_id) &
-                             (data["Student"].str.lower().str.contains(student_name_part))]
+        if st.button("Verify Student"):
+            filtered_data = data[(data["MM"] == month) &
+                                 (data["Student ID"].str.lower().str.strip() == student_id) &
+                                 (data["Student"].str.lower().str.contains(student_name_part))]
 
-        if not filtered_data.empty:
-            # Display student's name at the top
-            student_name = filtered_data["Student"].iloc[0]
-            st.subheader(f"👨‍🎓 Welcome, {student_name}!")
+            if not filtered_data.empty:
+                # Display student's name at the top
+                student_name = filtered_data["Student"].iloc[0]
+                st.subheader(f"👨‍🎓 Welcome, {student_name}!")
 
-            # Check for required columns
-            required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken"]
-            missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+                # Check for required columns
+                required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken"]
+                missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
-            if missing_columns:
-                st.error(f"The following required columns are missing: {missing_columns}")
-                st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
+                if missing_columns:
+                    st.error(f"The following required columns are missing: {missing_columns}")
+                    st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
+                else:
+                    # Select relevant columns for display
+                    filtered_data = filtered_data[required_columns]
+                    st.subheader("📚 Your Monthly Class Data")
+                    st.write(filtered_data)
+
+                    # Calculate total hours
+                    total_hours = filtered_data["Hr"].sum()
+                    st.write(f"**Total Hours for {month}th month :** {total_hours:.2f}")
+
+                    # Subject-wise breakdown
+                    subject_hours = filtered_data.groupby("Subject")["Hr"].sum().reset_index()
+                    subject_hours = subject_hours.rename(columns={"Hr": "Total Hours"})
+                    st.subheader("📊 Subject-wise Hour Breakdown")
+                    st.write(subject_hours)
+
             else:
-                # Select relevant columns for display
-                filtered_data = filtered_data[required_columns]
-                st.subheader("📚 Your Monthly Class Data")
-                st.write(filtered_data)
-
-                # Calculate total hours
-                total_hours = filtered_data["Hr"].sum()
-                st.write(f"**Total Hours for {month}th month :** {total_hours:.2f}")
-
-                # Subject-wise breakdown
-                subject_hours = filtered_data.groupby("Subject")["Hr"].sum().reset_index()
-                subject_hours = subject_hours.rename(columns={"Hr": "Total Hours"})
-                st.subheader("📊 Subject-wise Hour Breakdown")
-                st.write(subject_hours)
-
-                # Optionally display as a bar chart
-                
-        else:
-            st.error("Verification failed. Please check your details.")
+                st.error("Verification failed. Please check your details.")
 
 
 # Main function to handle user role selection and page display
