@@ -265,9 +265,9 @@ def manage_data(data, role):
         st.write(data.columns.tolist())
         return
 
-   if role == "Student":
-    student_id = st.text_input("Enter Student ID").strip().lower()
-    student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+    if role == "Student":
+        student_id = st.text_input("Enter Student ID").strip().lower()
+        student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
     if st.button("Verify Student"):
         # Filter data for the selected student
