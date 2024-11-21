@@ -256,8 +256,8 @@ def show_teacher_schedule(teacher_id):
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
+    st.write("Available columns in data:", data.columns.tolist())  # Debugging
 
-    # Check if 'MM' column exists for month selection
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
     else:
@@ -266,36 +266,35 @@ def manage_data(data, role):
         return
 
     if role == "Teacher":
+        if "Teacher ID" not in data.columns:
+            st.error("The column 'Teacher ID' is missing from the data. Please check the source sheet.")
+            return
+
         teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
         teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-    if st.button("Verify Teacher"):
-        # Filter data based on Teacher ID and partial name match
-        filtered_data = data[(data["MM"] == month) &
-                             (data["Teacher ID"].str.lower().str.strip() == teacher_id) &
-                             (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+        if st.button("Verify Teacher"):
+            filtered_data = data[(data["MM"] == month) &
+                                 (data["Teacher ID"].str.lower().str.strip() == teacher_id) &
+                                 (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
 
-        if not filtered_data.empty:
-            # Display teacher's name at the top
-            teacher_name = filtered_data["Teachers Name"].iloc[0]
-            st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
+            if not filtered_data.empty:
+                teacher_name = filtered_data["Teachers Name"].iloc[0]
+                st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
 
-            # Check if required columns exist
-            required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
-            missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+                required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
+                missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
-            if missing_columns:
-                st.error(f"The following required columns are missing: {missing_columns}")
-                st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
+                if missing_columns:
+                    st.error(f"The following required columns are missing: {missing_columns}")
+                    st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
+                else:
+                    show_filtered_data(filtered_data, role)
+                    if teacher_id:
+                        show_teacher_schedule(teacher_id)
             else:
-                # Show filtered data with highlighting duplicates and salary calculations
-                show_filtered_data(filtered_data, role)
+                st.error("Verification failed. Please check your Teacher ID and name.")
 
-                # Display teacher's weekly schedule
-                if teacher_id:
-                    show_teacher_schedule(teacher_id)
-        else:
-            st.error("Verification failed. Please check your Teacher ID and name.")
 
 
     elif role == "Student":
