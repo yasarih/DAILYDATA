@@ -266,11 +266,10 @@ def manage_data(data, role):
         return
 
     if role == "Student":
-        student_id = st.text_input("Enter Student ID").strip().lower()
-        student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
+    student_id = st.text_input("Enter Student ID").strip().lower()
+    student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
     if st.button("Verify Student"):
-        # Filter data for the selected student
         filtered_data = data[(data["MM"] == month) &
                              (data["Student ID"].str.lower().str.strip() == student_id) &
                              (data["Student"].str.lower().str.contains(student_name_part))]
@@ -280,50 +279,34 @@ def manage_data(data, role):
             student_name = filtered_data["Student"].iloc[0]
             st.subheader(f"👨‍🎓 Welcome, {student_name}!")
 
-            # Select relevant columns for display
-            filtered_data = filtered_data[["Date", "Subject", "Hr", "Teachers Name", "Topic"]]
-            st.subheader("📚 Your Monthly Class Data")
-            st.write(filtered_data)
+            # Check for required columns
+            required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Topic"]
+            missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
-            # Calculate total hours
-            total_hours = filtered_data["Hr"].sum()
-            st.write(f"**Total Hours for {month}:** {total_hours:.2f}")
+            if missing_columns:
+                st.error(f"The following required columns are missing: {missing_columns}")
+                st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
+            else:
+                # Select relevant columns for display
+                filtered_data = filtered_data[required_columns]
+                st.subheader("📚 Your Monthly Class Data")
+                st.write(filtered_data)
 
-            # Subject-wise breakdown
-            subject_hours = filtered_data.groupby("Subject")["Hr"].sum().reset_index()
-            subject_hours = subject_hours.rename(columns={"Hr": "Total Hours"})
-            st.subheader("📊 Subject-wise Hour Breakdown")
-            st.write(subject_hours)
+                # Calculate total hours
+                total_hours = filtered_data["Hr"].sum()
+                st.write(f"**Total Hours for {month}:** {total_hours:.2f}")
 
-            # Optionally display as a bar chart
-            st.bar_chart(subject_hours.set_index("Subject"))
+                # Subject-wise breakdown
+                subject_hours = filtered_data.groupby("Subject")["Hr"].sum().reset_index()
+                subject_hours = subject_hours.rename(columns={"Hr": "Total Hours"})
+                st.subheader("📊 Subject-wise Hour Breakdown")
+                st.write(subject_hours)
+
+                # Optionally display as a bar chart
+                st.bar_chart(subject_hours.set_index("Subject"))
         else:
             st.error("Verification failed. Please check your details.")
 
-
-    elif role == "Teacher":
-        teacher_id = st.text_input("Enter Teacher ID").strip().lower()
-        teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
-
-        if st.button("Verify Teacher"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) & 
-                                 (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
-            
-            if not filtered_data.empty:
-                teacher_name = filtered_data["Teachers Name"].iloc[0]
-                st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
-                
-                # Show filtered data and other relevant details
-                show_filtered_data(filtered_data, role)
-                
-                # Show EM data with phone numbers
-                show_student_em_table(data, teacher_name)
-                
-                # Show teacher's weekly schedule
-                show_teacher_schedule(teacher_id)
-            else:
-                st.error("Verification failed. Please check your details.")
 
 # Main function to handle user role selection and page display
 def main():
