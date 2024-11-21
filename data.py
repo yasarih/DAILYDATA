@@ -266,33 +266,37 @@ def manage_data(data, role):
         return
 
     if role == "Teacher":
-        teacher_name = st.text_input("Enter Your Name").strip().lower()
+    teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+    teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
-        if st.button("Show Teacher Data"):
-            filtered_data = data[(data["MM"] == month) & 
-                                 (data["Teachers Name"].str.lower().str.strip() == teacher_name)]
+    if st.button("Verify Teacher"):
+        # Filter data based on Teacher ID and partial name match
+        filtered_data = data[(data["MM"] == month) &
+                             (data["Teacher ID"].str.lower().str.strip() == teacher_id) &
+                             (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
 
-            if not filtered_data.empty:
-                # Display teacher's name at the top
-                st.subheader(f"👩‍🏫 Welcome, {teacher_name.title()}!")
+        if not filtered_data.empty:
+            # Display teacher's name at the top
+            teacher_name = filtered_data["Teachers Name"].iloc[0]
+            st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
 
-                # Check if required columns exist
-                required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
-                missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+            # Check if required columns exist
+            required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
+            missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
-                if missing_columns:
-                    st.error(f"The following required columns are missing: {missing_columns}")
-                    st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
-                else:
-                    # Show filtered data with highlighting duplicates and salary calculations
-                    show_filtered_data(filtered_data, role)
-
-                    # Display teacher's weekly schedule
-                    teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
-                    if teacher_id:
-                        show_teacher_schedule(teacher_id)
+            if missing_columns:
+                st.error(f"The following required columns are missing: {missing_columns}")
+                st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
             else:
-                st.error("No data found. Please check your name or data for the selected month.")
+                # Show filtered data with highlighting duplicates and salary calculations
+                show_filtered_data(filtered_data, role)
+
+                # Display teacher's weekly schedule
+                if teacher_id:
+                    show_teacher_schedule(teacher_id)
+        else:
+            st.error("Verification failed. Please check your Teacher ID and name.")
+
 
     elif role == "Student":
         student_id = st.text_input("Enter Student ID").strip().lower()
