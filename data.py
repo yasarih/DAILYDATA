@@ -303,7 +303,7 @@ def manage_data(data, role):
                 st.write(subject_hours)
 
                 # Optionally display as a bar chart
-                st.bar_chart(subject_hours.set_index("Subject"))
+                
         else:
             st.error("Verification failed. Please check your details.")
 
