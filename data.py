@@ -190,8 +190,7 @@ def show_filtered_data(filtered_data, role):
     if role == "Teacher":
         # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
-        filtered_data["Hr"] = filtered_data["Hr"]
-
+        
         # Apply row highlighting for duplicates in "Date" and "Student ID" columns
         if "Date" in filtered_data.columns and "Student ID" in filtered_data.columns:
             filtered_data['Duplicate'] = filtered_data.duplicated(subset=["Date", "Student ID"], keep=False)
@@ -221,7 +220,6 @@ def show_filtered_data(filtered_data, role):
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
 
-# Function to show teacher's weekly schedule from the schedule sheet
 # Function to show teacher's weekly schedule from the schedule sheet
 st.subheader("Your Weekly Schedule")
 days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -274,7 +272,6 @@ else:
 
     # Display the pivot table
     st.write(schedule_pivot)
-
 
 
 # Function to manage data based on the selected role
