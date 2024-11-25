@@ -300,7 +300,7 @@ def show_teacher_schedule(teacher_id):
                 continue
 
             # Filter by the specified teacher ID
-            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == Teacher ID]
+            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher id]
 
             # Filter by status
             valid_statuses = ["Active", "Paused - Short (Leave)"]
