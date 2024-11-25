@@ -223,37 +223,46 @@ def show_filtered_data(filtered_data, role):
 
 # Function to show teacher's weekly schedule from the schedule sheet
 # Function to show teacher's weekly schedule from the schedule sheet
-def show_teacher_schedule(teacher_id):
-    st.subheader("Your Weekly Schedule")
-    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    schedule_data = pd.DataFrame()
+st.subheader("Your Weekly Schedule")
+days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+schedule_data = pd.DataFrame()
 
 # Iterate through the days to fetch and filter data
-    for day in days:
-        try:
+for day in days:
+    try:
+        st.write(f"Fetching data for {day}...")
         # Fetch data from the sheet
-            day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
+        day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
         
-        # Validate data columns
-            if day_data.empty or not {"Teacher ID", "Time Slot", "Student ID", "Status"}.issubset(day_data.columns):
-                st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID, Status")
-                continue
-            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+        # Check if data exists and has the required columns
+        if day_data.empty:
+            st.warning(f"No data found for {day}.")
+            continue
+
+        required_columns = {"Teacher ID", "Time Slot", "Student ID", "Status"}
+        if not required_columns.issubset(day_data.columns):
+            st.warning(f"Missing columns in {day} sheet. Expected columns: {', '.join(required_columns)}")
+            continue
+
+        # Filter by the specified teacher ID
+        day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
 
         # Filter by status
-            valid_statuses = ["Active", "Paused - Short (Leave)"]
-            day_data = day_data[day_data['Status'].isin(valid_statuses)]
+        valid_statuses = ["Active", "Paused - Short (Leave)"]
+        day_data = day_data[day_data['Status'].isin(valid_statuses)]
 
         # Add the day as a column
-            day_data['Day'] = day
+        day_data['Day'] = day
 
         # Append to the main schedule data
-            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
-        except Exception as e:
-            st.error(f"Error loading {day} schedule: {e}")
+        schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
+    except Exception as e:
+        st.error(f"Error loading {day} schedule: {e}")
 
 # Process and display the schedule if data is available
-if not schedule_data.empty:
+if schedule_data.empty:
+    st.write("No schedule found for this teacher.")
+else:
     # Combine duplicate entries by concatenating 'Student ID' with a comma separator
     schedule_data = schedule_data.groupby(['Time Slot', 'Day'])['Student ID'].apply(lambda x: ', '.join(x)).reset_index()
 
@@ -265,8 +274,6 @@ if not schedule_data.empty:
 
     # Display the pivot table
     st.write(schedule_pivot)
-else:
-    st.write("No schedule found for this teacher.")
 
 
 
