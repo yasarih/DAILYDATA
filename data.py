@@ -237,7 +237,7 @@ def show_teacher_schedule(teacher_id):
         # Validate data columns
             if day_data.empty or not {"Teacher ID", "Time Slot", "Student ID", "Status"}.issubset(day_data.columns):
                 st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID, Status")
-            continue
+                continue
             day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
 
         # Filter by status
