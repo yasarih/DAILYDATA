@@ -243,7 +243,7 @@ for day in days:
             continue
 
         # Filter by the specified teacher ID
-        day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+        day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == Teacher ID]
 
         # Filter by status
         valid_statuses = ["Active", "Paused - Short (Leave)"]
@@ -273,8 +273,8 @@ else:
     # Display the pivot table
     st.write(schedule_pivot)
 
-def show_teacher_schedule(teacher_id):
-    if not teacher_id:
+def show_teacher_schedule(Teacher ID):
+    if not Teacher ID:
         st.error("Teacher ID is required to display the schedule.")
         return
 
@@ -299,7 +299,7 @@ def show_teacher_schedule(teacher_id):
                 continue
 
             # Filter by the specified teacher ID
-            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == Teacher ID]
 
             # Filter by status
             valid_statuses = ["Active", "Paused - Short (Leave)"]
@@ -345,12 +345,12 @@ def manage_data(data, role):
             st.error("The column 'Teacher ID' is missing from the data. Please check the source sheet.")
             return
 
-        teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+        Teacher ID = st.text_input("Enter Your Teacher ID").strip().lower()
         teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
         if st.button("Verify Teacher"):
             filtered_data = data[(data["MM"] == month) &
-                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
+                                 (data["Teachers ID"].str.lower().str.strip() == Teacher ID) &
                                  (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
 
             if not filtered_data.empty:
@@ -366,8 +366,8 @@ def manage_data(data, role):
                 else:
                     show_filtered_data(filtered_data, role)
                     show_student_em_table(data, teacher_name)
-                    if teacher_id:
-                        show_teacher_schedule(teacher_id)
+                    if Teacher ID:
+                        show_teacher_schedule(Teacher ID)
             else:
                 st.error("Verification failed. Please check your Teacher ID and name.")
 
