@@ -115,7 +115,7 @@ def show_student_em_table(data, teacher_name):
         st.error("Student name column not found.")
         return
 
-    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
+    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number","Status"]].drop_duplicates()
     st.write(student_em_table)
 
 # Function to calculate salary
