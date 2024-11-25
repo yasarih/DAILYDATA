@@ -370,8 +370,8 @@ def manage_data(data, role):
                 else:
                     show_filtered_data(filtered_data, role)
                     show_student_em_table(data, teacher_name)
-                    if Teacher ID:
-                        show_teacher_schedule(Teacher ID)
+                    if teacher_id:
+                        show_teacher_schedule(teacher_id)
             else:
                 st.error("Verification failed. Please check your Teacher ID and name.")
 
