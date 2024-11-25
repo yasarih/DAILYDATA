@@ -249,7 +249,7 @@ def show_teacher_schedule(teacher_id):
 
         # Append to the main schedule data
             schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
-       except Exception as e:
+        except Exception as e:
             st.error(f"Error loading {day} schedule: {e}")
 
 # Process and display the schedule if data is available
