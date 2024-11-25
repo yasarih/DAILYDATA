@@ -274,8 +274,8 @@ else:
     # Display the pivot table
     st.write(schedule_pivot)
 
-def show_teacher_schedule(Teacher ID):
-    if not Teacher ID:
+def show_teacher_schedule(teacher_id):
+    if not teacher_id:
         st.error("Teacher ID is required to display the schedule.")
         return
 
