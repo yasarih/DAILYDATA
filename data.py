@@ -243,7 +243,8 @@ for day in days:
             continue
 
         # Filter by the specified teacher ID
-        day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == Teacher ID]
+        day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+
 
         # Filter by status
         valid_statuses = ["Active", "Paused - Short (Leave)"]
