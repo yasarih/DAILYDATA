@@ -102,7 +102,7 @@ def get_merged_data_with_em():
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM','Status':'Status','EM Phone': 'Phone Number'})
 
-    merged_data = main_data.merge(em_data[['Student ID', 'EM','Status' 'Phone Number']], on="Student ID", how="left")
+    merged_data = main_data.merge(em_data[['Student ID', 'EM','Status','Phone Number']], on="Student ID", how="left")
     return merged_data
 
 
