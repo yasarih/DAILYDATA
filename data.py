@@ -257,6 +257,7 @@ def show_teacher_schedule(teacher_id):
 def manage_data(data, role):
     st.subheader(f"{role} Data")
     st.write("Available columns in data:", data.columns.tolist())  # Debugging
+    #st.write("Available columns in data:", data.columns.tolist())  # Debugging
 
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
@@ -290,7 +291,6 @@ def manage_data(data, role):
                     #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
                 else:
                     show_filtered_data(filtered_data, role)
-                    show_student_em_table(data, teacher_name)
                     if teacher_id:
                         show_teacher_schedule(teacher_id)
             else:
@@ -313,7 +313,7 @@ def manage_data(data, role):
                 st.subheader(f"👨‍🎓 Welcome, {student_name}!")
 
                 # Check for required columns
-                required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken","Type of class"]
+                required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken"]
                 missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
                 if missing_columns:
