@@ -273,7 +273,61 @@ else:
     # Display the pivot table
     st.write(schedule_pivot)
 
+def show_teacher_schedule(teacher_id):
+    if not teacher_id:
+        st.error("Teacher ID is required to display the schedule.")
+        return
 
+    st.subheader(f"Schedule for Teacher ID: {teacher_id}")
+    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    schedule_data = pd.DataFrame()
+
+    for day in days:
+        try:
+            st.write(f"Fetching data for {day}...")
+            # Fetch data from the sheet
+            day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
+
+            # Check if data exists and has the required columns
+            if day_data.empty:
+                st.warning(f"No data found for {day}.")
+                continue
+
+            required_columns = {"Teacher ID", "Time Slot", "Student ID", "Status"}
+            if not required_columns.issubset(day_data.columns):
+                st.warning(f"Missing columns in {day} sheet. Expected columns: {', '.join(required_columns)}")
+                continue
+
+            # Filter by the specified teacher ID
+            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+
+            # Filter by status
+            valid_statuses = ["Active", "Paused - Short (Leave)"]
+            day_data = day_data[day_data['Status'].isin(valid_statuses)]
+
+            # Add the day as a column
+            day_data['Day'] = day
+
+            # Append to the main schedule data
+            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
+        except Exception as e:
+            st.error(f"Error fetching data for {day}: {e}")
+
+    if schedule_data.empty:
+        st.write("No schedule found for this teacher.")
+        return
+
+    # Combine duplicate entries by concatenating 'Student ID' with a comma separator
+    schedule_data = schedule_data.groupby(['Time Slot', 'Day'])['Student ID'].apply(lambda x: ', '.join(x)).reset_index()
+
+    # Perform pivot operation after handling duplicates
+    schedule_pivot = schedule_data.pivot(index="Time Slot", columns="Day", values="Student ID").reindex(columns=days)
+
+    # Replace NaN values with null for better readability
+    schedule_pivot = schedule_pivot.fillna("null")
+
+    # Display the pivot table
+    st.write(schedule_pivot)
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
