@@ -311,7 +311,7 @@ def show_teacher_schedule(teacher_id):
             # Append to the main schedule data
             schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
         except Exception as e:
-            st.error(f"Error fetching data for {day}: {e}")
+            #st.error(f"Error fetching data for {day}: {e}")
 
     if schedule_data.empty:
         st.write("No schedule found for this teacher.")
