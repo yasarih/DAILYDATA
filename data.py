@@ -278,7 +278,7 @@ def show_teacher_schedule(teacher_id):
         st.error("Teacher ID is required to display the schedule.")
         return
 
-    st.subheader(f"Schedule for Teacher : {teacher_name}")
+    st.subheader("Schedule for Teacher ")
     days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     schedule_data = pd.DataFrame()
 
