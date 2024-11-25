@@ -278,13 +278,13 @@ def show_teacher_schedule(teacher_id):
         st.error("Teacher ID is required to display the schedule.")
         return
 
-    st.subheader(f"Schedule for Teacher ID: {teacher_id}")
+    st.subheader(f"Schedule for Teacher : {teacher_name}")
     days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     schedule_data = pd.DataFrame()
 
     for day in days:
         try:
-            st.write(f"Fetching data for {day}...")
+            #st.write(f"Fetching data for {day}...")
             # Fetch data from the sheet
             day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
 
