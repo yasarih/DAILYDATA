@@ -354,7 +354,7 @@ def manage_data(data, role):
 
         if st.button("Verify Teacher"):
             filtered_data = data[(data["MM"] == month) &
-                                 (data["Teachers ID"].str.lower().str.strip() == Teacher ID) &
+                                 data["Teachers ID"].str.lower().str.strip() == teacher_id&
                                  (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
 
             if not filtered_data.empty:
