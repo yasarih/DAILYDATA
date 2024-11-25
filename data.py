@@ -348,7 +348,8 @@ def manage_data(data, role):
             st.error("The column 'Teacher ID' is missing from the data. Please check the source sheet.")
             return
 
-        Teacher ID = st.text_input("Enter Your Teacher ID").strip().lower()
+        teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+
         teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
         if st.button("Verify Teacher"):
