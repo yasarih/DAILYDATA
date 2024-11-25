@@ -225,34 +225,32 @@ def show_filtered_data(filtered_data, role):
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
     st.subheader("Your Weekly Schedule")
-days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-schedule_data = pd.DataFrame()
+    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    schedule_data = pd.DataFrame()
 
 # Iterate through the days to fetch and filter data
-for day in days:
-    try:
+    for day in days:
+        try:
         # Fetch data from the sheet
-        day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
+            day_data = fetch_data_from_sheet("1RTJrYtD0Fo4GlLyZ2ds7M_1jnQJPk1cpeAvtsTwttdU", day)
         
         # Validate data columns
-        if day_data.empty or not {"Teacher ID", "Time Slot", "Student ID", "Status"}.issubset(day_data.columns):
-            st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID, Status")
+            if day_data.empty or not {"Teacher ID", "Time Slot", "Student ID", "Status"}.issubset(day_data.columns):
+                st.warning(f"Missing columns in {day} sheet. Expected columns: Teacher ID, Time Slot, Student ID, Status")
             continue
-
-        # Filter by the specified teacher ID
-        day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
+            day_data = day_data[day_data['Teacher ID'].str.lower().str.strip() == teacher_id]
 
         # Filter by status
-        valid_statuses = ["Active", "Paused - Short (Leave)"]
-        day_data = day_data[day_data['Status'].isin(valid_statuses)]
+            valid_statuses = ["Active", "Paused - Short (Leave)"]
+            day_data = day_data[day_data['Status'].isin(valid_statuses)]
 
         # Add the day as a column
-        day_data['Day'] = day
+            day_data['Day'] = day
 
         # Append to the main schedule data
-        schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
-    except Exception as e:
-        st.error(f"Error loading {day} schedule: {e}")
+            schedule_data = pd.concat([schedule_data, day_data], ignore_index=True)
+       except Exception as e:
+            st.error(f"Error loading {day} schedule: {e}")
 
 # Process and display the schedule if data is available
 if not schedule_data.empty:
