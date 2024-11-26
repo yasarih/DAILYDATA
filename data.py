@@ -313,7 +313,7 @@ def manage_data(data, role):
                 st.subheader(f"👨‍🎓 Welcome, {student_name}!")
 
                 # Check for required columns
-                required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken"]
+                required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken", "Type of class"]
                 missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
                 if missing_columns:
