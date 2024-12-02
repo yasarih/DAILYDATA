@@ -3,7 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
-import jsonimport pandas as pd
+import json
 
 
 def load_credentials_from_secrets():
