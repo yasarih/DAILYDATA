@@ -258,7 +258,7 @@ def manage_data(data, role):
 
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
-        year = st.sidebar.selectbox("Select Month", sorted(data["Year"].unique()))
+        year = st.sidebar.selectbox("Select Year", sorted(data["Year"].unique()))
     else:
         st.warning("Month data ('MM' column) not found. Available columns are:")
         st.write(data.columns.tolist())
