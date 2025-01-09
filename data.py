@@ -273,9 +273,12 @@ def manage_data(data, role):
         teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
         if st.button("Verify Teacher"):
-            filtered_data = data[(data["MM"] == month) &
-                                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
-                                 (data["Teachers Name"].str.lower().str.contains(teacher_name_part))]
+        filtered_data = data[
+            (data["MM"] == month) & 
+            (data["Year"] == year) &  # Added condition to filter by year
+            (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
+            (data["Teachers Name"].str.lower().str.contains(teacher_name_part))
+        ]
 
             if not filtered_data.empty:
                 teacher_name = filtered_data["Teachers Name"].iloc[0]
