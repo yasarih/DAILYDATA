@@ -318,7 +318,7 @@ def manage_data(data, role):
                     #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
                 else:
                     show_filtered_data(filtered_data, role)
-                    show_student_em_table(merged_data, teacher_name)
+                    
                     if teacher_id:
                         show_teacher_schedule(teacher_id)
             else:
