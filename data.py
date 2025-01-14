@@ -109,14 +109,14 @@ def get_merged_data_with_em():
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
     """
-    Display a table of all students in the logged-in teacher's class, 
+    Display a unique list of students taken by the logged-in teacher, 
     showing their ID, name, EM, and EM's phone number.
 
     Args:
     - data: Merged DataFrame containing student and EM details.
     - teacher_name: Name of the logged-in teacher.
     """
-    st.subheader(f"Student Roster for Teacher: {teacher_name}")
+    st.subheader(f"Unique List of Students for Teacher: {teacher_name}")
 
     # Check if required columns exist in the data
     required_columns = {"Student ID", "Student", "EM", "Phone Number", "Teachers Name"}
@@ -131,15 +131,19 @@ def show_student_em_table(data, teacher_name):
         st.warning("No students found for the logged-in teacher.")
         return
 
+    # Remove duplicate students
+    teacher_students = teacher_students.drop_duplicates(subset=["Student ID", "Student"])
+
     # Select relevant columns
     display_columns = ["Student ID", "Student", "EM", "Phone Number"]
     teacher_students = teacher_students[display_columns]
 
-    # Display the table
+    # Display the unique list of students
     st.write(teacher_students)
 
     # Display summary stats
-    st.write(f"**Total Students:** {len(teacher_students)}")
+    st.write(f"**Total Unique Students:** {len(teacher_students)}")
+
 
 
 
