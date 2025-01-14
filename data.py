@@ -107,25 +107,40 @@ def get_merged_data_with_em():
 
 
 # Function to show student EM data with phone numbers
-def show_student_em_table(data, em_data, teacher_name):
-    st.subheader("List of Students with Corresponding EM and EM's Phone Number")
+def show_student_em_table(data, teacher_name):
+    """
+    Display a table of all students in the logged-in teacher's class, 
+    showing their ID, name, EM, and EM's phone number.
 
-    # Ensure `data` contains the "Student" column
-    if "Student" not in data.columns:
-        st.error("Student name column not found in the filtered data.")
+    Args:
+    - data: Merged DataFrame containing student and EM details.
+    - teacher_name: Name of the logged-in teacher.
+    """
+    st.subheader(f"Student Roster for Teacher: {teacher_name}")
+
+    # Check if required columns exist in the data
+    required_columns = {"Student ID", "Student", "EM", "Phone Number", "Teachers Name"}
+    if not required_columns.issubset(data.columns):
+        st.error(f"Missing columns in the data. Expected: {required_columns}.")
         return
 
-    # Ensure `em_data` contains necessary columns
-    required_columns = ["Student", "EM", "EM's Phone Number"]
-    if not all(col in em_data.columns for col in required_columns):
-        st.error("EM data does not have the required columns: 'Student', 'EM', 'EM's Phone Number'")
+    # Filter data for the logged-in teacher
+    teacher_students = data[data["Teachers Name"].str.lower() == teacher_name.lower()]
+    
+    if teacher_students.empty:
+        st.warning("No students found for the logged-in teacher.")
         return
 
-    # Merge `data` with `em_data` on "Student"
-    merged_data = data.merge(em_data, on="Student", how="left")
+    # Select relevant columns
+    display_columns = ["Student ID", "Student", "EM", "Phone Number"]
+    teacher_students = teacher_students[display_columns]
 
-    # Display the merged table
-    st.write(merged_data)
+    # Display the table
+    st.write(teacher_students)
+
+    # Display summary stats
+    st.write(f"**Total Students:** {len(teacher_students)}")
+
 
 
 # Function to calculate salary
@@ -303,6 +318,7 @@ def manage_data(data, role):
                     #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
                 else:
                     show_filtered_data(filtered_data, role)
+                    show_student_em_table(merged_data, teacher_name)
                     if teacher_id:
                         show_teacher_schedule(teacher_id)
             else:
