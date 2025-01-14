@@ -107,16 +107,26 @@ def get_merged_data_with_em():
 
 
 # Function to show student EM data with phone numbers
-def show_student_em_table(data, teacher_name):
+def show_student_em_table(data, em_data, teacher_name):
     st.subheader("List of Students with Corresponding EM and EM's Phone Number")
-    if "Student" in data.columns:
-        student_column = "Student"
-    else:
-        st.error("Student name column not found.")
+
+    # Ensure `data` contains the "Student" column
+    if "Student" not in data.columns:
+        st.error("Student name column not found in the filtered data.")
         return
 
-    student_em_table = data[data["Teachers Name"] == teacher_name][["Student ID", student_column, "EM", "Phone Number"]].drop_duplicates()
-    st.write(student_em_table)
+    # Ensure `em_data` contains necessary columns
+    required_columns = ["Student", "EM", "EM's Phone Number"]
+    if not all(col in em_data.columns for col in required_columns):
+        st.error("EM data does not have the required columns: 'Student', 'EM', 'EM's Phone Number'")
+        return
+
+    # Merge `data` with `em_data` on "Student"
+    merged_data = data.merge(em_data, on="Student", how="left")
+
+    # Display the merged table
+    st.write(merged_data)
+
 
 # Function to calculate salary
 def calculate_salary(row):
@@ -186,7 +196,7 @@ def highlight_duplicates_html(df, subset_columns):
 
 # Example usage inside the show_filtered_data function
 # Function to display filtered data based on the role (Student or Teacher)
-def show_filtered_data(filtered_data, role):
+def show_filtered_data(filtered_data,em_data, role):
     if role == "Teacher":
         # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
@@ -220,7 +230,7 @@ def show_filtered_data(filtered_data, role):
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
-        show_student_em_table(data, teacher_name)
+        show_student_em_table(data, em_data, teacher_name)
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
