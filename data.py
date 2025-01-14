@@ -196,7 +196,7 @@ def highlight_duplicates_html(df, subset_columns):
 
 # Example usage inside the show_filtered_data function
 # Function to display filtered data based on the role (Student or Teacher)
-def show_filtered_data(filtered_data,em_data, role):
+def show_filtered_data(filtered_data,role):
     if role == "Teacher":
         # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
