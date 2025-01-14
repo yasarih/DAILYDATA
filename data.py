@@ -318,7 +318,7 @@ def manage_data(data, role):
                     st.error(f"The following required columns are missing: {missing_columns}")
                     #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
                 else:
-                    show_filtered_data(filtered_data, role)
+                    show_filtered_data(filtered_data,role,data, teacher_name)
                     
                     if teacher_id:
                         show_teacher_schedule(teacher_id)
