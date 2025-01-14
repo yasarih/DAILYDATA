@@ -220,6 +220,7 @@ def show_filtered_data(filtered_data, role):
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
+        show_student_em_table(data, teacher_name)
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
