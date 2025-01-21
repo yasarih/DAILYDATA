@@ -1,16 +1,17 @@
-import streamlit as st
+import streamlit as st  # Import Streamlit first
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
 import json
 
-# Ensure this is the first Streamlit command in your script
+# Place st.set_page_config at the very top
 st.set_page_config(page_title="Student Insights App", layout="wide")
 
 # Define spreadsheet ID globally
 spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
 
+# Functions for connecting to Google Sheets and fetching data
 def load_credentials_from_secrets():
     try:
         credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
@@ -47,74 +48,34 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
         st.exception(e)
     return None
 
-
-def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
-    sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
-    if not sheet:
-        st.warning(f"Could not establish a connection to the worksheet '{worksheet_name}'.")
-        return pd.DataFrame()
-    try:
-        data = sheet.get_all_values()
-        if data:
-            headers = pd.Series(data[0]).fillna('').str.strip()
-            headers = headers.where(headers != '', other='Unnamed')
-            headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
-            df = pd.DataFrame(data[1:], columns=headers)
-            df.replace('', pd.NA, inplace=True)
-            df.ffill(inplace=True)
-            if 'Hr' in df.columns:
-                df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
-            return df
-        else:
-            st.warning(f"No data found in worksheet '{worksheet_name}'.")
-            return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Error fetching data from '{worksheet_name}': {e}")
-        st.exception(e)
-    return pd.DataFrame()
-
-def load_data(spreadsheet_id, sheet_name):
-    data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
-    if data.empty:
-        st.error("No data available to process.")
-        return pd.DataFrame()
-
-    data.columns = data.columns.str.strip().str.lower()
-    required_columns = ["date", "subject", "hr", "teachers name", "chapter taken", "type of class", "student id", "student"]
-    missing_columns = set(required_columns) - set(data.columns)
-    if missing_columns:
-        st.error(f"Missing columns in data: {missing_columns}")
-        raise ValueError(f"Missing columns in data: {missing_columns}")
-    
-    data = data[required_columns]
-    data["date"] = pd.to_datetime(data["date"], errors="coerce")
-    data = data[data["date"].notna()]  # Filter out rows with invalid dates
-    data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
-    return data
-
-if st.button("Refresh Data"):
-    student_data = load_data(spreadsheet_id, "Student class details")
-    st.success("Data refreshed!")
-
+# Main application logic
 def main():
-    st.set_page_config(page_title="Student Insights App", layout="wide")
-    st.title("Student Insights and Analysis")
+    st.title("Student Insights and Analysis")  # Streamlit commands now come after set_page_config
 
+    # Load data
     try:
         student_data = load_data(spreadsheet_id, "Student class details")
     except ValueError as e:
         st.error(str(e))
         return
 
+    # Inputs for verification
     student_id = st.text_input("Enter Your Student ID").strip().lower()
     student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
-    month = st.selectbox("Select Month", options=list(range(1, 13)), format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B'))
+
+    # Month dropdown
+    month = st.selectbox(
+        "Select Month",
+        options=list(range(1, 13)),
+        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B')  # Show month names
+    )
 
     if st.button("Fetch Data"):
         if not student_id or len(student_name_part) < 4:
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
+        # Filter data based on student ID, partial name match, and month
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
@@ -122,18 +83,20 @@ def main():
         ]
 
         if filtered_data.empty:
-            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
+            st.error(f"No data found for the given Student ID, Name, and selected month.")
             return
 
         student_name = filtered_data["student"].iloc[0].title()
         st.subheader(f"Welcome, {student_name}!")
 
+        # Display filtered data
         filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
         final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
-        subject_hours = filtered_data.groupby("subject")["hr"].sum().reset_index().rename(columns={"hr": "Total Hours"})
-
         st.write("**Your Monthly Class Details**")
         st.dataframe(final_data)
+
+        # Display subject breakdown
+        subject_hours = filtered_data.groupby("subject")["hr"].sum().reset_index().rename(columns={"hr": "Total Hours"})
         st.subheader("Subject-wise Hour Breakdown")
         st.dataframe(subject_hours)
 
