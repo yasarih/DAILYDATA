@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 import json
 
+# Set page configuration first
+st.set_page_config(page_title="Student Insights App", layout="wide")
+
 # Define spreadsheet ID globally
 spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
 
