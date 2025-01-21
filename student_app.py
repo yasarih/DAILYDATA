@@ -6,7 +6,7 @@ import numpy as np
 import json
 
 # Set page configuration
-st.set_page_config(page_title="Updating...", layout="wide")
+st.set_page_config(page_title="Student Insights App", layout="wide")
 
 # Global variable for spreadsheet ID
 spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
@@ -90,7 +90,7 @@ def load_data(spreadsheet_id, sheet_name):
 
 # Main application
 def main():
-    st.title("Student Insights and Analysis")
+    st.title("Updating...")
 
     try:
         student_data = load_data(spreadsheet_id, "Student class details")
