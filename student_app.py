@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 
-# Set page configuration first
+# Ensure this is the first Streamlit command in your script
 st.set_page_config(page_title="Student Insights App", layout="wide")
 
 # Define spreadsheet ID globally
@@ -46,6 +46,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
         st.error(f"Unexpected error connecting to Google Sheets: {e}")
         st.exception(e)
     return None
+
 
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
