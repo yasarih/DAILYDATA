@@ -72,13 +72,12 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 # Function to load and preprocess data
 @st.cache_data
 def load_data(spreadsheet_id, sheet_name):
-    """
-    Fetch data from the specified spreadsheet and preprocess it.
-    Normalize column names and prepare data for case-insensitive matching.
-    """
-    # Remove caching to fetch fresh data every time
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
     
+    if data.empty:
+        st.error("No data available to process.")
+        return pd.DataFrame()
+
     # Normalize column names
     data.columns = data.columns.str.strip().str.lower()
 
@@ -89,19 +88,13 @@ def load_data(spreadsheet_id, sheet_name):
     ]
     missing_columns = set(required_columns) - set(data.columns)
     if missing_columns:
+        st.error(f"Missing columns in data: {missing_columns}")
         raise ValueError(f"Missing columns in data: {missing_columns}")
-
-    # Filter required columns
-    data = data[required_columns]
-
-    # Normalize relevant columns for matching
-    data["student id"] = data["student id"].astype(str).str.lower().str.strip()
-    data["student"] = data["student"].astype(str).str.lower().str.strip()
-    data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
     
-    # Convert 'Date' to datetime format
-    data["date"] = pd.to_datetime(data["date"], errors="coerce")  # Coerce invalid dates to NaT
-
+    # Rest of the processing remains unchanged
+    data = data[required_columns]
+    data["date"] = pd.to_datetime(data["date"], errors="coerce")
+    data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
     return data
 
 # Add a refresh button in the main function
