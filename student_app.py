@@ -1,17 +1,17 @@
-import streamlit as st  # Import Streamlit first
+import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
 import json
 
-# Place st.set_page_config at the very top
+# Set page configuration
 st.set_page_config(page_title="Student Insights App", layout="wide")
 
-# Define spreadsheet ID globally
+# Global variable for spreadsheet ID
 spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
 
-# Functions for connecting to Google Sheets and fetching data
+# Function definitions
 def load_credentials_from_secrets():
     try:
         credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
@@ -25,83 +25,58 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     if not credentials_info:
         return None
 
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/drive.file"
-    ]
-
     try:
-        credentials = Credentials.from_service_account_info(
-            credentials_info,
-            scopes=scopes
-        )
+        credentials = Credentials.from_service_account_info(credentials_info)
         client = gspread.authorize(credentials)
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
-    except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
     except Exception as e:
-        st.error(f"Unexpected error connecting to Google Sheets: {e}")
-        st.exception(e)
-    return None
+        st.error(f"Error connecting to Google Sheets: {e}")
+        return None
 
-# Main application logic
+def load_data(spreadsheet_id, sheet_name):
+    sheet = connect_to_google_sheets(spreadsheet_id, sheet_name)
+    if not sheet:
+        return pd.DataFrame()
+
+    try:
+        data = sheet.get_all_values()
+        if data:
+            df = pd.DataFrame(data[1:], columns=data[0])
+            df.columns = df.columns.str.lower().str.strip()
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+            return df
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+    return pd.DataFrame()
+
+# Main function
 def main():
-    st.title("Student Insights and Analysis")  # Streamlit commands now come after set_page_config
-
-    # Load data
+    st.title("Student Insights and Analysis")
     try:
         student_data = load_data(spreadsheet_id, "Student class details")
-    except ValueError as e:
-        st.error(str(e))
+    except Exception as e:
+        st.error(f"Error loading student data: {e}")
         return
 
-    # Inputs for verification
     student_id = st.text_input("Enter Your Student ID").strip().lower()
-    student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
-
-    # Month dropdown
-    month = st.selectbox(
-        "Select Month",
-        options=list(range(1, 13)),
-        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B')  # Show month names
-    )
+    student_name_part = st.text_input("Enter Any Part of Your Name").strip().lower()
 
     if st.button("Fetch Data"):
         if not student_id or len(student_name_part) < 4:
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
-        # Filter data based on student ID, partial name match, and month
+        # Filter data
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
-            (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.month == month)
+            (student_data["student"].str.contains(student_name_part, na=False))
         ]
 
-        if filtered_data.empty:
-            st.error(f"No data found for the given Student ID, Name, and selected month.")
-            return
-
-        student_name = filtered_data["student"].iloc[0].title()
-        st.subheader(f"Welcome, {student_name}!")
-
-        # Display filtered data
-        filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
-        final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
-        st.write("**Your Monthly Class Details**")
-        st.dataframe(final_data)
-
-        # Display subject breakdown
-        subject_hours = filtered_data.groupby("subject")["hr"].sum().reset_index().rename(columns={"hr": "Total Hours"})
-        st.subheader("Subject-wise Hour Breakdown")
-        st.dataframe(subject_hours)
-
-        total_hours = filtered_data["hr"].sum()
-        st.write(f"**Total Hours:** {total_hours:.2f}")
+        if not filtered_data.empty:
+            st.dataframe(filtered_data)
+        else:
+            st.error("No matching data found.")
 
 if __name__ == "__main__":
     main()
