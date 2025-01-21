@@ -76,6 +76,7 @@ def load_data(spreadsheet_id, sheet_name):
     Fetch data from the specified spreadsheet and preprocess it.
     Normalize column names and prepare data for case-insensitive matching.
     """
+    # Remove caching to fetch fresh data every time
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
     
     # Normalize column names
@@ -102,6 +103,11 @@ def load_data(spreadsheet_id, sheet_name):
     data["date"] = pd.to_datetime(data["date"], errors="coerce")  # Coerce invalid dates to NaT
 
     return data
+
+# Add a refresh button in the main function
+if st.button("Refresh Data"):
+    student_data = load_data(spreadsheet_id, "Student class details")
+    st.success("Data refreshed!")
 
 # Main application
 def main():
