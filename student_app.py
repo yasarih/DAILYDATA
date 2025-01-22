@@ -1,86 +1,41 @@
 import streamlit as st
+import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import pandas as pd
-import numpy as np
-import json
 
-# Set page configuration
-st.set_page_config(page_title="Student Insights App", layout="wide")
-
-# Global variable for spreadsheet ID
-spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
-
-# Function to load credentials
-def load_credentials_from_secrets():
-    try:
-        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        return credentials_info
-    except KeyError:
-        st.error("Google credentials not found in Streamlit secrets.")
-        return None
-
-# Function to connect to Google Sheets
-def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    credentials_info = load_credentials_from_secrets()
-    if not credentials_info:
-        return None
-
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/drive.file"
-    ]
-
-    try:
-        credentials = Credentials.from_service_account_info(credentials_info, scopes=scopes)
-        client = gspread.authorize(credentials)
-        sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
-        return sheet
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found.")
-    except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet.")
-    except Exception as e:
-        st.error(f"Error connecting to Google Sheets: {e}")
-    return None
-
-# Fetch data from sheet
-def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
-    sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
-    if not sheet:
-        return pd.DataFrame()
-    try:
-        data = sheet.get_all_values()
-        if data:
-            headers = pd.Series(data[0]).fillna('').str.strip()
-            headers = headers.where(headers != '', other='Unnamed')
-            headers += headers.groupby(headers).cumcount().astype(str).replace('0', '')
-            df = pd.DataFrame(data[1:], columns=headers)
-            df.replace('', pd.NA, inplace=True)
-            df.ffill(inplace=True)
-            return df
-        else:
-            st.warning(f"No data found in worksheet '{worksheet_name}'.")
-            return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return pd.DataFrame()
-
-# Load and preprocess data
-def load_data(spreadsheet_id, sheet_name):
+# Function to connect to Google Sheets and fetch data
+@st.cache_data
+def fetch_data_from_sheet(spreadsheet_id, sheet_name):
     """
-    Fetch data from the specified spreadsheet and preprocess it.
-    Normalize column names and prepare data for case-insensitive matching.
+    Fetch data from a Google Sheets worksheet and return it as a DataFrame.
     """
-    data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
+    # Load credentials from Streamlit secrets
+    credentials_info = st.secrets["google_credentials"]
+    credentials = Credentials.from_service_account_info(credentials_info)
+    client = gspread.authorize(credentials)
+
+    # Open spreadsheet and fetch data
+    sheet = client.open_by_key(spreadsheet_id).worksheet(sheet_name)
+    data = sheet.get_all_values()
+    if not data:
+        raise ValueError(f"No data found in the sheet: {sheet_name}")
     
+    # Use the first row as headers and remaining rows as data
+    df = pd.DataFrame(data[1:], columns=data[0])
+    return df
+
+# Function to preprocess data
+@st.cache_data
+def preprocess_data(data):
+    """
+    Normalize and preprocess data for case-insensitive matching.
+    """
     # Normalize column names
     data.columns = data.columns.str.strip().str.lower()
 
     # Validate required columns
     required_columns = [
-        "date", "subject", "hr", "teachers name", 
+        "date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
@@ -90,13 +45,13 @@ def load_data(spreadsheet_id, sheet_name):
     # Filter required columns
     data = data[required_columns]
 
-    # Normalize relevant columns for matching
+    # Normalize relevant columns
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
-    
-    # Convert 'Date' to datetime format
-    data["date"] = pd.to_datetime(data["date"], errors="coerce")  # Coerce invalid dates to NaT
+
+    # Convert 'date' to datetime format
+    data["date"] = pd.to_datetime(data["date"], errors="coerce")
 
     return data
 
@@ -105,12 +60,15 @@ def main():
     st.set_page_config(page_title="Student Insights App", layout="wide")
     st.title("Student Insights and Analysis")
 
-    # Load data
+    # Load and preprocess data
     spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
+    sheet_name = "Student class details"
+    
     try:
-        student_data = load_data(spreadsheet_id, "Student class details")
-    except ValueError as e:
-        st.error(str(e))
+        raw_data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
+        student_data = preprocess_data(raw_data)
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
         return
 
     # Inputs for verification
@@ -168,4 +126,3 @@ def main():
 # Run the app
 if __name__ == "__main__":
     main()
-
