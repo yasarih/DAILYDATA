@@ -373,7 +373,7 @@ def manage_data(data, role):
 
 # Main function to handle user role selection and page display
 def main():
-    st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=170)
+    
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Angle Belearn: Your Daily Class Insights")
 
