@@ -3,15 +3,22 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
+# Set Streamlit page configuration
 st.set_page_config(page_title="Student Insights App", layout="wide")
 
+# Function to fetch data from Google Sheets using GID
 @st.cache_data(show_spinner=False)
 def fetch_data_from_gid(spreadsheet_id, gid):
+    """
+    Fetch data from a specific Google Sheets worksheet using its GID and return it as a DataFrame.
+    """
     try:
+        # Load credentials from Streamlit secrets
         credentials_info = st.secrets["google_credentials_new_project"]
         credentials = Credentials.from_service_account_info(credentials_info)
         client = gspread.authorize(credentials)
 
+        # Open the spreadsheet
         spreadsheet = client.open_by_key(spreadsheet_id)
         worksheet = next(
             (ws for ws in spreadsheet.worksheets() if ws.id == int(gid)), None
@@ -19,31 +26,44 @@ def fetch_data_from_gid(spreadsheet_id, gid):
         if not worksheet:
             raise ValueError(f"No worksheet found with GID: {gid}")
 
+        # Fetch data from the worksheet
         data = worksheet.get_all_values()
         if not data or len(data) < 2:
             raise ValueError(f"No data found in the sheet with GID: {gid}")
 
+        # Use the first row as headers and remaining rows as data
         df = pd.DataFrame(data[1:], columns=data[0])
         return df
+
     except Exception as e:
         st.error(f"Error fetching data from Google Sheets: {e}")
         st.stop()
 
+# Function to preprocess data
 @st.cache_data(show_spinner=False)
 def preprocess_data(data):
+    """
+    Normalize and preprocess data for case-insensitive matching.
+    """
     st.write("Columns in dataset:", data.columns.tolist())  # Debugging
 
-    data.columns = data.columns.str.strip().str.lower()
+    # Normalize column names to match new required columns
+    data.columns = data.columns.str.strip()
 
+    # Validate required columns
     required_columns = [
         "Date", "Subject", "Hr", "Teachers Name",
-        "Chapter taken", "Type of class", "Student ID","Student"
+        "Chapter taken", "Type of class", "Student ID", "Student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
     if missing_columns:
         raise ValueError(f"Missing columns in data: {missing_columns}")
 
+    # Filter and normalize data
     data = data[required_columns]
+    data.rename(columns=lambda x: x.strip().lower(), inplace=True)  # Normalize columns to lowercase
+
+    # Normalize relevant columns
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
@@ -51,9 +71,11 @@ def preprocess_data(data):
     data.dropna(subset=["date", "hr"], inplace=True)
     return data
 
+# Main application
 def main():
     st.title("Student Insights and Analysis")
 
+    # Google Sheets configuration
     spreadsheet_id = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"
     gid = "1061281247"
 
