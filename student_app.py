@@ -21,18 +21,14 @@ st.set_page_config(
 )
 
 # Function to load credentials from local JSON file
-def load_credentials():
-    """Load credentials from a local JSON file."""
+def load_credentials_from_secrets():
     try:
-        with open("creds.json") as f:  # Replace with your credentials JSON file
-            credentials_info = json.load(f)
+        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
         return credentials_info
-    except FileNotFoundError:
-        st.error("creds.json file not found. Please provide the credentials file.")
+    except KeyError:
+        st.error("Google credentials not found in Streamlit secrets.")
         return None
-    except json.JSONDecodeError:
-        st.error("Error decoding the creds.json file. Ensure it's properly formatted.")
-        return None
+
 
 # Function to connect to Google Sheets
 def connect_to_google_sheets(spreadsheet_id, worksheet_name):
