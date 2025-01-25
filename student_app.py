@@ -147,48 +147,48 @@ def main():
         ]
 
         if not filtered_data.empty:
-    student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
-    st.subheader(f"Welcome, {student_name}!")
+            student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
+            st.subheader(f"Welcome, {student_name}!")
 
     # Format 'Date' as DD/MM/YYYY for display purposes
-    filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")  # Coerce invalid dates to NaT
-    filtered_data.dropna(subset=["date"], inplace=True)  # Drop rows with invalid dates
-    filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')  # Format dates for display
+            filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")  # Coerce invalid dates to NaT
+            filtered_data.dropna(subset=["date"], inplace=True)  # Drop rows with invalid dates
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')  # Format dates for display
 
     # Remove "student id" and "student" columns before displaying
-    final_data = filtered_data.drop(columns=["student id", "student"])
-    final_data = final_data.reset_index(drop=True)
+            final_data = filtered_data.drop(columns=["student id", "student"])
+            final_data = final_data.reset_index(drop=True)
 
     # Display subject breakdown
-    subject_hours = (
-        filtered_data.groupby("subject")["hr"]
-        .sum()
-        .reset_index()
-        .rename(columns={"hr": "Total Hours"})
-    )
-
-    st.write("**Your Monthly Class Details**")
-    st.dataframe(final_data)  # Display final data without hidden columns
-    st.subheader("Subject-wise Hour Breakdown")
-    st.dataframe(subject_hours)
-
-    # Total hours calculation and display
-    total_hours = filtered_data["hr"].sum()
-    st.write(f"**Total Hours:** {total_hours:.2f}")
-
-    # Additional output: Weekly breakdown
-    filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week  # Use cleaned dates
-    weekly_hours = (
-        filtered_data.groupby("week")["hr"]
-        .sum()
-        .reset_index()
-        .rename(columns={"hr": "Weekly Total Hours"})
-    )
-    st.subheader("Weekly Hour Breakdown")
-    st.dataframe(weekly_hours)
-else:
-    st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
-
+            subject_hours = (
+                filtered_data.groupby("subject")["hr"]
+                .sum()
+                .reset_index()
+                .rename(columns={"hr": "Total Hours"})
+            )
+        
+            st.write("**Your Monthly Class Details**")
+            st.dataframe(final_data)  # Display final data without hidden columns
+            st.subheader("Subject-wise Hour Breakdown")
+            st.dataframe(subject_hours)
+        
+            # Total hours calculation and display
+            total_hours = filtered_data["hr"].sum()
+            st.write(f"**Total Hours:** {total_hours:.2f}")
+        
+            # Additional output: Weekly breakdown
+            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week  # Use cleaned dates
+            weekly_hours = (
+                filtered_data.groupby("week")["hr"]
+                .sum()
+                .reset_index()
+                .rename(columns={"hr": "Weekly Total Hours"})
+            )
+            st.subheader("Weekly Hour Breakdown")
+            st.dataframe(weekly_hours)
+        else:
+            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
+        
 
 # Run the app
 if __name__ == "__main__":
