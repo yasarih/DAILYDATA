@@ -11,7 +11,7 @@ def fetch_data_from_gid(spreadsheet_id, gid):
     """
     try:
         # Load credentials from Streamlit secrets
-        credentials_info = st.secrets["google_credentials"]
+        credentials_info = st.secrets["google_credentials_new_project"]
         credentials = Credentials.from_service_account_info(credentials_info)
         client = gspread.authorize(credentials)
 
