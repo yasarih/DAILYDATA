@@ -89,8 +89,8 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     return pd.DataFrame()
 # Function to merge student and EM data
 def get_merged_data_with_em():
-    main_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student class details")
-    em_data = fetch_data_from_sheet("17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y", "Student Data")
+    main_data = fetch_data_from_sheet("1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w", "Student class details")
+    em_data = fetch_data_from_sheet("1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w", "Student Data")
 
     if main_data.empty:
         st.warning("Main data is empty. Please check the 'Student class details' sheet.")
