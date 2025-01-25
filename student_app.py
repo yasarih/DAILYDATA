@@ -111,37 +111,45 @@ def main():
             filtered_data = student_data[
                 (student_data["student id"] == student_id) &
                 (student_data["student"].str.contains(student_name_part, na=False, regex=False)) &
-                (student_data["date"].dt.month == month)  # Filter by selected month
+                (student_data["date"].dt.month == month)
             ]
 
-            if not filtered_data.empty:
-                student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
-                st.subheader(f"Welcome, {student_name}!")
-
-                # Format 'date' as DD/MM/YYYY for display purposes
-                filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
-
-                # Remove "student id" and "student" columns before displaying
-                final_data = filtered_data.drop(columns=["student id", "student"])
-                final_data = final_data.reset_index(drop=True)
-
-                # Display subject breakdown
-                subject_hours = (
-                    filtered_data.groupby("subject")["hr"]
-                    .sum()
-                    .reset_index()
-                    .rename(columns={"hr": "Total Hours"})
-                )
-
-                st.write("**Your Monthly Class Details**")
-                st.dataframe(final_data)  # Display final data without hidden columns
-                st.subheader("Subject-wise Hour Breakdown")
-                st.dataframe(subject_hours)
-
-                total_hours = filtered_data["hr"].sum()
-                st.write(f"**Total Hours:** {total_hours:.2f}")
-            else:
+            if filtered_data.empty:
                 st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
+                return
+
+            # Debug columns in filtered data
+            st.write("Filtered Data Columns:", filtered_data.columns.tolist())
+
+            if "subject" not in filtered_data.columns or "hr" not in filtered_data.columns:
+                st.error("Required columns ('subject' or 'hr') are missing from the data.")
+                return
+
+            student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
+            st.subheader(f"Welcome, {student_name}!")
+
+            # Format 'date' as DD/MM/YYYY for display purposes
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
+
+            # Remove "student id" and "student" columns before displaying
+            final_data = filtered_data.drop(columns=["student id", "student"])
+            final_data = final_data.reset_index(drop=True)
+
+            # Display subject breakdown
+            subject_hours = (
+                filtered_data.groupby("subject")["hr"]
+                .sum()
+                .reset_index()
+                .rename(columns={"hr": "Total Hours"})
+            )
+
+            st.write("**Your Monthly Class Details**")
+            st.dataframe(final_data)  # Display final data without hidden columns
+            st.subheader("Subject-wise Hour Breakdown")
+            st.dataframe(subject_hours)
+
+            total_hours = filtered_data["hr"].sum()
+            st.write(f"**Total Hours:** {total_hours:.2f}")
 
 # Run the app
 if __name__ == "__main__":
