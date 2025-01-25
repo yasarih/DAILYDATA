@@ -32,7 +32,7 @@ def load_credentials_from_secrets():
 
 # Function to connect to Google Sheets
 def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    credentials_info = load_credentials()
+    credentials_info = load_credentials_from_secrets()  # Fixed here
     if not credentials_info:
         return None
 
