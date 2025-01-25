@@ -6,14 +6,41 @@ from google.oauth2.service_account import Credentials
 # Function to connect to Google Sheets and fetch data using GID
 @st.cache_data(show_spinner=False)
 def fetch_data_from_gid(spreadsheet_id, gid):
+    """
+    Fetch data from a specific Google Sheets worksheet using its GID and return it as a DataFrame.
+    """
     try:
-        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        return credentials_info
+        # Load credentials from Streamlit secrets
+        credentials_info = st.secrets["google_credentials_new_project"]
+        credentials = Credentials.from_service_account_info(credentials_info)
+        client = gspread.authorize(credentials)
+
+        # Open the spreadsheet
+        spreadsheet = client.open_by_key(spreadsheet_id)
+
+        # Find the worksheet by GID
+        worksheet = next(
+            (ws for ws in spreadsheet.worksheets() if ws.id == int(gid)), None
+        )
+        if not worksheet:
+            raise ValueError(f"No worksheet found with GID: {gid}")
+
+        # Fetch data from the worksheet
+        data = worksheet.get_all_values()
+        if not data or len(data) < 2:  # Ensure there is data
+            raise ValueError(f"No data found in the sheet with GID: {gid}")
+
+        # Use the first row as headers and remaining rows as data
+        df = pd.DataFrame(data[1:], columns=data[0])
+        return df
+
     except KeyError:
         st.error("Google credentials not found in Streamlit secrets.")
-        return None
-# Function to preprocess data
-@st.cache_data(show_spinner=False)
+        st.stop()
+    except Exception as e:
+        st.error(f"Error fetching data from Google Sheets: {e}")
+        st.stop()
+
 def preprocess_data(data):
     """
     Normalize and preprocess data for case-insensitive matching.
