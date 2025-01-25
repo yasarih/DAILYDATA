@@ -41,65 +41,60 @@ def fetch_data_from_gid(spreadsheet_id, gid):
 
 # Function to preprocess data
 @st.cache_data(show_spinner=False)
-def preprocess_data(data):
+def load_data(spreadsheet_id, sheet_name):
     """
-    Normalize and preprocess data for case-insensitive matching.
+    Fetch data from the specified spreadsheet and preprocess it.
+    Normalize column names and prepare data for case-insensitive matching.
     """
-    st.write("Columns in dataset:", data.columns.tolist())  # Debugging
-
-    # Normalize column names to match new required columns
-    data.columns = data.columns.str.strip()
+    data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
+    
+    # Normalize column names
+    data.columns = data.columns.str.strip().str.lower()
 
     # Validate required columns
     required_columns = [
-        "Date", "Subject", "Hr", "Teachers Name",
-        "Chapter taken", "Type of class", "Student ID", "Student"
+        "date", "subject", "hr", "teachers name", 
+        "chapter taken", "type of class", "student id", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
     if missing_columns:
         raise ValueError(f"Missing columns in data: {missing_columns}")
 
-    # Filter and normalize data
+    # Filter required columns
     data = data[required_columns]
-    data.rename(columns=lambda x: x.strip().lower(), inplace=True)  # Normalize columns to lowercase
 
-    # Normalize relevant columns
+    # Normalize relevant columns for matching
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
-    data["date"] = pd.to_datetime(data["date"], errors="coerce")
-    data.dropna(subset=["date", "hr"], inplace=True)
+    
+    # Convert 'Date' to datetime format
+    data["date"] = pd.to_datetime(data["date"], errors="coerce")  # Coerce invalid dates to NaT
+
     return data
 
 # Main application
 def main():
+    st.set_page_config(page_title="Student Insights App", layout="wide")
     st.title("Student Insights and Analysis")
 
-    # Google Sheets configuration
-    spreadsheet_id = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"
-    gid = "1061281247"
-
+    # Load data
+    spreadsheet_id = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your spreadsheet ID
     try:
-        raw_data = fetch_data_from_gid(spreadsheet_id, gid)
-        st.write("Raw data from Google Sheets:", raw_data.head())  # Debugging
-        student_data = preprocess_data(raw_data)
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
+        student_data = load_data(spreadsheet_id, "Student class details")
+    except ValueError as e:
+        st.error(str(e))
         return
 
-    student_id = st.text_input("Enter Your Student ID", placeholder="e.g., 12345").strip().lower()
-    student_name_part = st.text_input(
-        "Enter Any Part of Your Name (minimum 4 characters)",
-        placeholder="e.g., John"
-    ).strip().lower()
+    # Inputs for verification
+    student_id = st.text_input("Enter Your Student ID").strip().lower()
+    student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
 
-    if len(student_name_part) < 4 and student_name_part:
-        st.warning("Please enter at least 4 characters of your name.")
-
+    # Month dropdown
     month = st.selectbox(
         "Select Month",
         options=list(range(1, 13)),
-        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B')
+        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B')  # Show month names
     )
 
     if st.button("Fetch Data"):
@@ -107,18 +102,25 @@ def main():
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
+        # Filter data based on student ID, partial name match, and month
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.month == month)
+            (student_data["date"].dt.month == month)  # Filter by selected month
         ]
 
         if not filtered_data.empty:
-            student_name = filtered_data["student"].iloc[0].title()
+            student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
             st.subheader(f"Welcome, {student_name}!")
-            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
-            final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
 
+            # Format 'Date' as DD/MM/YYYY for display purposes
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
+
+            # Remove "student id" and "student" columns before displaying
+            final_data = filtered_data.drop(columns=["student id", "student"])
+            final_data = final_data.reset_index(drop=True)
+
+            # Display subject breakdown
             subject_hours = (
                 filtered_data.groupby("subject")["hr"]
                 .sum()
@@ -127,14 +129,15 @@ def main():
             )
 
             st.write("**Your Monthly Class Details**")
-            st.dataframe(final_data)
+            st.dataframe(final_data)  # Display final data without hidden columns
             st.subheader("Subject-wise Hour Breakdown")
             st.dataframe(subject_hours)
 
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
         else:
-            st.info(f"No data found for the selected criteria.")
+            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
 
+# Run the app
 if __name__ == "__main__":
     main()
