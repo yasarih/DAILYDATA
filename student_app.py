@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 
 # Function to connect to Google Sheets and fetch data
 @st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False)
 def fetch_data_from_sheet(spreadsheet_id, sheet_name):
     """
     Fetch data from a Google Sheets worksheet and return it as a DataFrame.
@@ -18,18 +19,20 @@ def fetch_data_from_sheet(spreadsheet_id, sheet_name):
         # Open spreadsheet and fetch data
         sheet = client.open_by_key(spreadsheet_id).worksheet(sheet_name)
         data = sheet.get_all_values()
-        if not data:
+
+        # Debug: Log data to Streamlit
+        st.write("Raw data retrieved:", data)
+
+        if not data or len(data) < 2:  # Check if data is empty or has no rows
             raise ValueError(f"No data found in the sheet: {sheet_name}")
 
         # Use the first row as headers and remaining rows as data
         df = pd.DataFrame(data[1:], columns=data[0])
         return df
-    except KeyError:
-        st.error("Google credentials are not configured in Streamlit secrets.")
-        st.stop()
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
+        st.error(f"Error fetching data from Google Sheets: {e}")
         st.stop()
+
 
 # Function to preprocess data
 @st.cache_data(show_spinner=False)
