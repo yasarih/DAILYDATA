@@ -61,7 +61,7 @@ def main():
     st.title("Student Insights and Analysis")
 
     # Load and preprocess data
-    spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
+    spreadsheet_id = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your spreadsheet ID
     sheet_name = "Student class details"
     
     try:
