@@ -109,7 +109,7 @@ def main():
     st.title("Student Insights and Analysis")
 
     # Load data
-    spreadsheet_id = "17_Slyn6u0G6oHSzzXIpuuxPhzxx4ayOKYkXfQTLtk-Y"  # Replace with your spreadsheet ID
+    spreadsheet_id = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your spreadsheet ID
     try:
         student_data = load_data(spreadsheet_id, "Student class details")
     except ValueError as e:
