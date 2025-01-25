@@ -8,7 +8,7 @@ st.set_page_config(page_title="Student Insights App", layout="wide")
 
 # Function to fetch data from Google Sheets using GID
 @st.cache_data(show_spinner=False)
-def fetch_data_from_gid(spreadsheet_id, gid):
+def fetch_data_from_sheet(spreadsheet_id, gid):
     """
     Fetch data from a specific Google Sheets worksheet using its GID and return it as a DataFrame.
     """
