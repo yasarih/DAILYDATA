@@ -51,7 +51,7 @@ def preprocess_data(data):
     # Validate required columns
     required_columns = [
         "date", "subject", "hr", "teachers name",
-        "chapter taken", "type of class", "student id", "student"
+        "chapter taken", "type of class", "Student ID", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
     if missing_columns:
@@ -61,7 +61,7 @@ def preprocess_data(data):
     data = data[required_columns]
 
     # Normalize relevant columns
-    data["student id"] = data["student id"].astype(str).str.lower().str.strip()
+    data["Student ID"] = data["Student ID"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
 
@@ -111,9 +111,9 @@ def main():
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
-        # Filter data based on student ID, partial name match, and month
+        # Filter data based on Student ID, partial name match, and month
         filtered_data = student_data[
-            (student_data["student id"] == student_id) &
+            (student_data["Student ID"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
             (student_data["date"].dt.month == month)  # Filter by selected month
         ]
@@ -125,8 +125,8 @@ def main():
             # Format 'Date' as DD/MM/YYYY for display purposes
             filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
-            # Remove "student id" and "student" columns before displaying
-            final_data = filtered_data.drop(columns=["student id", "student"])
+            # Remove "Student ID" and "student" columns before displaying
+            final_data = filtered_data.drop(columns=["Student ID", "student"])
             final_data = final_data.reset_index(drop=True)
 
             # Display subject breakdown
