@@ -4,28 +4,35 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # Function to connect to Google Sheets and fetch data
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def fetch_data_from_sheet(spreadsheet_id, sheet_name):
     """
     Fetch data from a Google Sheets worksheet and return it as a DataFrame.
     """
-    # Load credentials from Streamlit secrets
-    credentials_info = st.secrets["google_credentials"]
-    credentials = Credentials.from_service_account_info(credentials_info)
-    client = gspread.authorize(credentials)
+    try:
+        # Load credentials from Streamlit secrets
+        credentials_info = st.secrets["google_credentials"]
+        credentials = Credentials.from_service_account_info(credentials_info)
+        client = gspread.authorize(credentials)
 
-    # Open spreadsheet and fetch data
-    sheet = client.open_by_key(spreadsheet_id).worksheet(sheet_name)
-    data = sheet.get_all_values()
-    if not data:
-        raise ValueError(f"No data found in the sheet: {sheet_name}")
-    
-    # Use the first row as headers and remaining rows as data
-    df = pd.DataFrame(data[1:], columns=data[0])
-    return df
+        # Open spreadsheet and fetch data
+        sheet = client.open_by_key(spreadsheet_id).worksheet(sheet_name)
+        data = sheet.get_all_values()
+        if not data:
+            raise ValueError(f"No data found in the sheet: {sheet_name}")
+
+        # Use the first row as headers and remaining rows as data
+        df = pd.DataFrame(data[1:], columns=data[0])
+        return df
+    except KeyError:
+        st.error("Google credentials are not configured in Streamlit secrets.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        st.stop()
 
 # Function to preprocess data
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def preprocess_data(data):
     """
     Normalize and preprocess data for case-insensitive matching.
@@ -50,8 +57,9 @@ def preprocess_data(data):
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
 
-    # Convert 'date' to datetime format
+    # Convert 'date' to datetime format and drop invalid rows
     data["date"] = pd.to_datetime(data["date"], errors="coerce")
+    data.dropna(subset=["date", "hr"], inplace=True)
 
     return data
 
@@ -72,8 +80,15 @@ def main():
         return
 
     # Inputs for verification
-    student_id = st.text_input("Enter Your Student ID").strip().lower()
-    student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
+    student_id = st.text_input("Enter Your Student ID", placeholder="e.g., 12345").strip().lower()
+    student_name_part = st.text_input(
+        "Enter Any Part of Your Name (minimum 4 characters)",
+        placeholder="e.g., John"
+    ).strip().lower()
+
+    # Real-time warning for name input
+    if len(student_name_part) < 4 and student_name_part:
+        st.warning("Please enter at least 4 characters of your name.")
 
     # Month dropdown
     month = st.selectbox(
@@ -121,7 +136,7 @@ def main():
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
         else:
-            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
+            st.info(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
 
 # Run the app
 if __name__ == "__main__":
