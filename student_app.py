@@ -3,12 +3,11 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-# Function to connect to Google Sheets and fetch data
+# Function to connect to Google Sheets and fetch data using GID
 @st.cache_data(show_spinner=False)
-@st.cache_data(show_spinner=False)
-def fetch_data_from_sheet(spreadsheet_id, sheet_name):
+def fetch_data_from_gid(spreadsheet_id, gid):
     """
-    Fetch data from a Google Sheets worksheet and return it as a DataFrame.
+    Fetch data from a specific Google Sheets worksheet using its GID and return it as a DataFrame.
     """
     try:
         # Load credentials from Streamlit secrets
@@ -16,23 +15,28 @@ def fetch_data_from_sheet(spreadsheet_id, sheet_name):
         credentials = Credentials.from_service_account_info(credentials_info)
         client = gspread.authorize(credentials)
 
-        # Open spreadsheet and fetch data
-        sheet = client.open_by_key(spreadsheet_id).worksheet(sheet_name)
-        data = sheet.get_all_values()
+        # Get the spreadsheet
+        spreadsheet = client.open_by_key(spreadsheet_id)
 
-        # Debug: Log data to Streamlit
-        st.write("Raw data retrieved:", data)
+        # Find the worksheet by GID
+        worksheet = next(
+            (ws for ws in spreadsheet.worksheets() if ws.id == int(gid)), None
+        )
+        if not worksheet:
+            raise ValueError(f"No worksheet found with GID: {gid}")
 
-        if not data or len(data) < 2:  # Check if data is empty or has no rows
-            raise ValueError(f"No data found in the sheet: {sheet_name}")
+        # Fetch data from the worksheet
+        data = worksheet.get_all_values()
+        if not data or len(data) < 2:  # Ensure there is data
+            raise ValueError(f"No data found in the sheet with GID: {gid}")
 
         # Use the first row as headers and remaining rows as data
         df = pd.DataFrame(data[1:], columns=data[0])
         return df
+
     except Exception as e:
         st.error(f"Error fetching data from Google Sheets: {e}")
         st.stop()
-
 
 # Function to preprocess data
 @st.cache_data(show_spinner=False)
@@ -71,12 +75,13 @@ def main():
     st.set_page_config(page_title="Student Insights App", layout="wide")
     st.title("Student Insights and Analysis")
 
-    # Load and preprocess data
+    # Google Sheets configuration
     spreadsheet_id = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your spreadsheet ID
-    sheet_name = "Student class details"
-    
+    gid = "1061281247"  # Default GID
+
     try:
-        raw_data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
+        # Fetch data using GID
+        raw_data = fetch_data_from_gid(spreadsheet_id, gid)
         student_data = preprocess_data(raw_data)
     except Exception as e:
         st.error(f"Error loading data: {e}")
