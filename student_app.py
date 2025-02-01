@@ -175,6 +175,7 @@ def main():
             # Total hours calculation and display
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
+            
         
         else:
             st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
