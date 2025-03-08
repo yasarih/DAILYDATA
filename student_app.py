@@ -58,7 +58,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     return None
  
  # Function to fetch data from Google Sheets
- def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
+def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
      sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
      if not sheet:
          return pd.DataFrame()
