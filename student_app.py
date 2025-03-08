@@ -58,6 +58,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     return None
 
 # Function to fetch data from Google Sheets
+# Function to fetch data from Google Sheets
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
@@ -71,16 +72,22 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         headers = pd.Series(data[0]).fillna('').str.strip()
         headers = headers.where(headers != '', other='Unnamed')
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
-        
+
         df = pd.DataFrame(data[1:], columns=headers)
         df.replace('', pd.NA, inplace=True)
 
-        # Convert 'Date' column properly
+        # Ensure 'date' column exists
         if "date" in df.columns:
             df["date"] = pd.to_datetime(df["date"], format="%d/%m/%Y", errors="coerce")
+            
+            # Check if all values are NaT (invalid)
             if df["date"].isna().all():
-                st.error("Date column is missing or contains non-datetime values. Please check your Google Sheet.")
+                st.error("The 'date' column is not in the correct format. Please check the Google Sheet.")
                 return pd.DataFrame()
+
+        else:
+            st.error("The 'date' column is missing in the Google Sheet.")
+            return pd.DataFrame()
 
         # Convert 'hr' column to numeric safely
         if "hr" in df.columns:
@@ -91,6 +98,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Error fetching data from worksheet: {e}")
         return pd.DataFrame()
+
 
 # Function to load and preprocess data
 @st.cache_data
