@@ -1,64 +1,64 @@
 import streamlit as st
-import pandas as pd
-from google.oauth2.service_account import Credentials
-import gspread
-import json
+ import pandas as pd
+ from google.oauth2.service_account import Credentials
+ import gspread
+ import json
  
  # Constants for Google Sheets
-SPREADSHEET_ID = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your Google Sheets ID
-WORKSHEET_NAME = "Student class details"  # Replace with your worksheet name
+ SPREADSHEET_ID = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your Google Sheets ID
+ WORKSHEET_NAME = "Student class details"  # Replace with your worksheet name
  
  # Set page layout and title
-st.set_page_config(
-    page_title="Student Insights App",
-    page_icon="🎓",
-    layout="wide",
-    menu_items={
-        "Get Help": None,
-        "Report a bug": None,
-        "About": None,
+ st.set_page_config(
+     page_title="Student Insights App",
+     page_icon="🎓",
+     layout="wide",
+     menu_items={
+         "Get Help": None,
+         "Report a bug": None,
+         "About": None,
      },
  )
  
  # Function to load credentials from local JSON file
-def load_credentials_from_secrets():
-    try:
-        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        return credentials_info
-    except KeyError:
-        st.error("Google credentials not found in Streamlit secrets.")
-        return None
+ def load_credentials_from_secrets():
+     try:
+         credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
+         return credentials_info
+     except KeyError:
+         st.error("Google credentials not found in Streamlit secrets.")
+         return None
  
  # Function to connect to Google Sheets
-def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    credentials_info = load_credentials_from_secrets()
-    if not credentials_info:
-        return None
+ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
+     credentials_info = load_credentials_from_secrets()
+     if not credentials_info:
+         return None
  
-    scopes = [
+     scopes = [
          "https://www.googleapis.com/auth/spreadsheets",
          "https://www.googleapis.com/auth/drive",
          "https://www.googleapis.com/auth/drive.file",
      ]
  
-    try:
-        credentials = Credentials.from_service_account_info(
-            credentials_info,
-            scopes=scopes,
+     try:
+         credentials = Credentials.from_service_account_info(
+             credentials_info,
+             scopes=scopes,
          )
-        client = gspread.authorize(credentials)
-        sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
-        return sheet
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
-    except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
-    except Exception as e:
-        st.error(f"Unexpected error connecting to Google Sheets: {e}")
-    return None
+         client = gspread.authorize(credentials)
+         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
+         return sheet
+     except gspread.exceptions.SpreadsheetNotFound:
+         st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
+     except gspread.exceptions.WorksheetNotFound:
+         st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
+     except Exception as e:
+         st.error(f"Unexpected error connecting to Google Sheets: {e}")
+     return None
  
  # Function to fetch data from Google Sheets
-def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
+ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
      sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
      if not sheet:
          return pd.DataFrame()
@@ -90,8 +90,8 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
          return pd.DataFrame()
  
  # Function to load and preprocess data
-@st.cache_data
-def load_data(spreadsheet_id, sheet_name):
+ @st.cache_data
+ def load_data(spreadsheet_id, sheet_name):
      data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
  
      # Normalize column names
