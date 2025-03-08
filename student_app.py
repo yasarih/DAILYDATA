@@ -71,7 +71,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         # Ensure 'Date' column exists
         if "Date" in df.columns:
             st.write("📌 Raw Date Column Sample (before conversion):", df["Date"].head(5).tolist())  # Debugging
-            df["Date"] = pd.to_Datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
+            df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
             
             # Check if all values are NaT (invalid)
             if df["Date"].isna().all():
@@ -139,7 +139,7 @@ def main():
     month = st.selectbox(
         "Select Month",
         options=list(range(1, 13)),
-        format_func=lambda x: pd.to_Datetime(f"2024-{x}-01").strftime('%B'),  # Show month names
+        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B'),  # Show month names
     )
 
     if st.button("Fetch Data"):
@@ -187,7 +187,7 @@ def main():
             st.write(f"**Total Hours:** {total_hours:.2f}")
 
         else:
-            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_Datetime(f'2024-{month}-01').strftime('%B')}).")
+            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
 
 # Run the app
 if __name__ == "__main__":
