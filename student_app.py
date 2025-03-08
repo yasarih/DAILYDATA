@@ -1,11 +1,9 @@
 import streamlit as st
- import pandas as pd
- from google.oauth2.service_account import Credentials
- import gspread
- import json
- 
- # Constants for Google Sheets
- SPREADSHEET_ID = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your Google Sheets ID
+import pandas as pd
+from google.oauth2.service_account import Credentials
+import gspread
+import json
+SPREADSHEET_ID = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your Google Sheets ID
  WORKSHEET_NAME = "Student class details"  # Replace with your worksheet name
  
  # Set page layout and title
@@ -191,3 +189,6 @@ import streamlit as st
  # Run the app
  if __name__ == "__main__":
      main()
+
+ 
+ 
