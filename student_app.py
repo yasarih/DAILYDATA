@@ -69,19 +69,19 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         df.replace('', pd.NA, inplace=True)
 
         # Ensure 'date' column exists
-        if "date" in df.columns:
-            st.write("📌 Raw Date Column Sample (before conversion):", df["date"].head(5).tolist())  # Debugging
-            df["date"] = pd.to_datetime(df["date"], format="%d/%m/%Y", errors="coerce")
+        if "Date" in df.columns:
+            st.write("📌 Raw Date Column Sample (before conversion):", df["Date"].head(5).tolist())  # Debugging
+            df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
             
             # Check if all values are NaT (invalid)
             if df["date"].isna().all():
                 st.error("🚨 The 'date' column is invalid or incorrectly formatted in Google Sheets.")
                 return pd.DataFrame()
 
-            st.write("✅ Date Column Sample (after conversion):", df["date"].head(5))  # Debugging
+            st.write("✅ Date Column Sample (after conversion):", df["Date"].head(5))  # Debugging
 
         else:
-            st.error("🚨 The 'date' column is missing in the Google Sheet.")
+            st.error("🚨 The 'Date' column is missing in the Google Sheet.")
             return pd.DataFrame()
 
         # Convert 'hr' column to numeric safely
