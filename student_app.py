@@ -68,14 +68,14 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         df = pd.DataFrame(data[1:], columns=headers)
         df.replace('', pd.NA, inplace=True)
 
-        # Ensure 'date' column exists
+        # Ensure 'Date' column exists
         if "Date" in df.columns:
             st.write("📌 Raw Date Column Sample (before conversion):", df["Date"].head(5).tolist())  # Debugging
-            df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
+            df["Date"] = pd.to_Datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
             
             # Check if all values are NaT (invalid)
-            if df["date"].isna().all():
-                st.error("🚨 The 'date' column is invalid or incorrectly formatted in Google Sheets.")
+            if df["Date"].isna().all():
+                st.error("🚨 The 'Date' column is invalid or incorrectly formatted in Google Sheets.")
                 return pd.DataFrame()
 
             st.write("✅ Date Column Sample (after conversion):", df["Date"].head(5))  # Debugging
@@ -102,9 +102,9 @@ def load_data(spreadsheet_id, sheet_name):
     # Normalize column names
     data.columns = data.columns.str.strip().str.lower()
 
-    # Validate required columns
+    # ValiDate required columns
     required_columns = [
-        "date", "subject", "hr", "teachers name",
+        "Date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
@@ -139,7 +139,7 @@ def main():
     month = st.selectbox(
         "Select Month",
         options=list(range(1, 13)),
-        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B'),  # Show month names
+        format_func=lambda x: pd.to_Datetime(f"2024-{x}-01").strftime('%B'),  # Show month names
     )
 
     if st.button("Fetch Data"):
@@ -147,16 +147,16 @@ def main():
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
-        # **Debugging check: Ensure "date" is datetime before filtering**
-        if not pd.api.types.is_datetime64_any_dtype(student_data["date"]):
-            st.error("🚨 The 'date' column is not in datetime format. Please check the Google Sheet.")
+        # **Debugging check: Ensure "Date" is Datetime before filtering**
+        if not pd.api.types.is_Datetime64_any_dtype(student_data["Date"]):
+            st.error("🚨 The 'Date' column is not in Datetime format. Please check the Google Sheet.")
             return
 
         # Filter data based on student ID, partial name match, and month
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.month == month)
+            (student_data["Date"].dt.month == month)
         ]
 
         if not filtered_data.empty:
@@ -164,7 +164,7 @@ def main():
             st.subheader(f"Welcome, {student_name}!")
 
             # Format 'Date' for display
-            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
+            filtered_data["Date"] = filtered_data["Date"].dt.strftime('%d/%m/%Y')
 
             # Remove sensitive columns before displaying
             final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
@@ -187,7 +187,7 @@ def main():
             st.write(f"**Total Hours:** {total_hours:.2f}")
 
         else:
-            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
+            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_Datetime(f'2024-{month}-01').strftime('%B')}).")
 
 # Run the app
 if __name__ == "__main__":
