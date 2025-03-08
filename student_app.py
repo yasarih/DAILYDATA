@@ -146,7 +146,7 @@ def main():
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.month == month)
+            (student_data["Date"].dt.month == month)
         ]
 
         if not filtered_data.empty:
@@ -154,7 +154,7 @@ def main():
             st.subheader(f"Welcome, {student_name}!")
 
             # Format 'Date' for display
-            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
+            filtered_data["Date"] = filtered_data["Date"].dt.strftime('%d/%m/%Y')
 
             # Remove sensitive columns before displaying
             final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
