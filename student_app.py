@@ -29,10 +29,9 @@ def load_credentials_from_secrets():
         st.error("Google credentials not found in Streamlit secrets.")
         return None
 
-
 # Function to connect to Google Sheets
 def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    credentials_info = load_credentials_from_secrets()  # Fixed here
+    credentials_info = load_credentials_from_secrets()
     if not credentials_info:
         return None
 
@@ -63,21 +62,29 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
         return pd.DataFrame()
-    
+
     try:
         data = sheet.get_all_values()
-        if data:
-            headers = pd.Series(data[0]).fillna('').str.strip()
-            headers = headers.where(headers != '', other='Unnamed')
-            headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
-            df = pd.DataFrame(data[1:], columns=headers)
-            df.replace('', pd.NA, inplace=True)
-            df.ffill(inplace=True)
-            if 'hr' in df.columns:
-                df['hr'] = pd.to_numeric(df['hr'], errors='coerce').fillna(0)
-            return df
-        else:
+        if not data:
             return pd.DataFrame()
+
+        headers = pd.Series(data[0]).fillna('').str.strip()
+        headers = headers.where(headers != '', other='Unnamed')
+        headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
+        
+        df = pd.DataFrame(data[1:], columns=headers)
+        df.replace('', pd.NA, inplace=True)
+
+        # Convert 'Date' column properly
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"], format="%d/%m/%Y", errors="coerce")
+
+        # Convert 'hr' column to numeric safely
+        if "hr" in df.columns:
+            df["hr"] = pd.to_numeric(df["hr"], errors="coerce").fillna(0)
+
+        return df
+
     except Exception as e:
         st.error(f"Error fetching data from worksheet: {e}")
         return pd.DataFrame()
@@ -99,16 +106,12 @@ def load_data(spreadsheet_id, sheet_name):
     if missing_columns:
         raise ValueError(f"Missing columns in data: {missing_columns}")
 
-    # Filter required columns
+    # Keep only necessary columns
     data = data[required_columns]
 
-    # Normalize relevant columns for matching
+    # Normalize student-related columns
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
-    data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
-
-    # Convert 'Date' to datetime format
-    data["date"] = pd.to_datetime(data["date"], errors="coerce")  # Coerce invalid dates to NaT
 
     return data
 
@@ -143,23 +146,20 @@ def main():
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.month == month)  # Filter by selected month
+            (student_data["date"].dt.month == month)
         ]
 
         if not filtered_data.empty:
-            student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
+            student_name = filtered_data["student"].iloc[0].title()
             st.subheader(f"Welcome, {student_name}!")
 
-    # Format 'Date' as DD/MM/YYYY for display purposes
-            filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")  # Coerce invalid dates to NaT
-            filtered_data.dropna(subset=["date"], inplace=True)  # Drop rows with invalid dates
-            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')  # Format dates for display
+            # Format 'Date' for display
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
-    # Remove "student id" and "student" columns before displaying
-            final_data = filtered_data.drop(columns=["student id", "student"])
-            final_data = final_data.reset_index(drop=True)
+            # Remove sensitive columns before displaying
+            final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
 
-    # Display subject breakdown
+            # Display subject breakdown
             subject_hours = (
                 filtered_data.groupby("subject")["hr"]
                 .sum()
@@ -168,24 +168,24 @@ def main():
             )
         
             st.write("**Your Monthly Class Details**")
-            st.dataframe(final_data)  # Display final data without hidden columns
+            st.dataframe(final_data)
             st.subheader("Subject-wise Hour Breakdown")
             st.dataframe(subject_hours)
         
             # Total hours calculation and display
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
+
             # Additional output: Weekly breakdown
-            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week  # Use cleaned dates
+            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week
             weekly_hours = (
-            filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"}))
+                filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"})
+            )
             st.subheader("Weekly Hour Breakdown")
             st.dataframe(weekly_hours)
             
-        
         else:
             st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
-        
 
 # Run the app
 if __name__ == "__main__":
