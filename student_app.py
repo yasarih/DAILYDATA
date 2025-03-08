@@ -113,6 +113,10 @@ def load_data(spreadsheet_id, sheet_name):
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
 
+    # Create 'mm' column if 'date' exists
+    if "date" in data.columns:
+        data["mm"] = data["date"].dt.month.astype(str).str.zfill(2)
+
     return data
 
 # Main application
@@ -125,6 +129,9 @@ def main():
     except ValueError as e:
         st.error(str(e))
         return
+
+    # Debug: Show available columns in dataset
+    st.write("🔍 Available columns in dataset:", student_data.columns.tolist())
 
     # Inputs for verification
     student_id = st.text_input("Enter Your Student ID").strip().lower()
@@ -142,12 +149,16 @@ def main():
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
+        # Check if 'mm' column exists
+        if "mm" not in student_data.columns:
+            st.error("Error: 'MM' column is missing in the dataset. Please check the Google Sheet.")
+            return
+
         # Filter data based on student ID, partial name match, and month
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["MM"].astype(str).str.zfill(2) == str(month).zfill(2))
-
+            (student_data["mm"] == str(month).zfill(2))
         ]
 
         if not filtered_data.empty:
@@ -155,7 +166,7 @@ def main():
             st.subheader(f"Welcome, {student_name}!")
 
             # Format 'Date' for display
-            filtered_data["Date"] = filtered_data["Date"].dt.strftime('%d/%m/%Y')
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
             # Remove sensitive columns before displaying
             final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
@@ -182,8 +193,9 @@ def main():
             weekly_hours = (
                 filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"})
             )
-            
-            
+            st.subheader("Weekly Class Breakdown")
+            st.dataframe(weekly_hours)
+
         else:
             st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
 
