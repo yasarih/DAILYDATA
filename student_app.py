@@ -90,8 +90,8 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
          return pd.DataFrame()
  
  # Function to load and preprocess data
- @st.cache_data
- def load_data(spreadsheet_id, sheet_name):
+@st.cache_data
+def load_data(spreadsheet_id, sheet_name):
      data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
  
      # Normalize column names
