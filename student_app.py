@@ -75,7 +75,7 @@ def load_data(spreadsheet_id, sheet_name):
 
     # Validate required columns
     required_columns = [
-        "date", "subject", "hr", "teachers name",
+        "mm","date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
