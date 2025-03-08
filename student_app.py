@@ -101,7 +101,7 @@ def load_data(spreadsheet_id, sheet_name):
     if "date" in data.columns and not data["date"].isna().all():
         data["mm"] = data["date"].dt.month.astype(str).str.zfill(2)
     else:
-        st.warning("⚠️ 'Date' column is missing or not properly formatted.")
+        st.warning("⚠️ 'date' column is missing or not properly formatted.")
 
     return data
 
@@ -148,7 +148,7 @@ def main():
             student_name = filtered_data["student"].iloc[0].title()
             st.subheader(f"Welcome, {student_name}!")
 
-            # Format 'Date' for display
+            # Format 'date' for display
             filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
             # Remove sensitive columns before displaying
