@@ -177,15 +177,7 @@ def main():
             st.write(f"**Total Hours:** {total_hours:.2f}")
 
             # Additional output: Weekly breakdown
-            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week
-            weekly_hours = (
-                filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"})
-            )
-            
-            
-        else:
-            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
-
+           
 # Run the app
 if __name__ == "__main__":
     main()
