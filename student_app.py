@@ -181,8 +181,7 @@ def main():
             weekly_hours = (
                 filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"})
             )
-            st.subheader("Weekly Hour Breakdown")
-            st.dataframe(weekly_hours)
+            
             
         else:
             st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
