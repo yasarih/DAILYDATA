@@ -142,7 +142,12 @@ def main():
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
-        # Filter data based on student ID, partial name match, and month
+        # Validate the date column
+        if "date" not in student_data.columns or student_data["date"].isna().all():
+            st.error("Date column is missing or contains only invalid values.")
+            return
+
+        # Filter data
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
@@ -153,31 +158,42 @@ def main():
             student_name = filtered_data["student"].iloc[0].title()
             st.subheader(f"Welcome, {student_name}!")
 
-            # Format 'Date' for display
+            # Ensure we work on a copy to avoid Pandas warnings
+            filtered_data = filtered_data.copy()
             filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
-            # Remove sensitive columns before displaying
+            # Display data
             final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
-
-            # Display subject breakdown
             subject_hours = (
                 filtered_data.groupby("subject")["hr"]
                 .sum()
                 .reset_index()
                 .rename(columns={"hr": "Total Hours"})
             )
-        
+
             st.write("**Your Monthly Class Details**")
             st.dataframe(final_data)
             st.subheader("Subject-wise Hour Breakdown")
             st.dataframe(subject_hours)
-        
-            # Total hours calculation and display
+
+            # Total hours calculation
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
 
-            # Additional output: Weekly breakdown
-           
+            # Week-wise breakdown
+            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week
+            if filtered_data["week"].isna().all():
+                st.error("Could not extract week numbers from date column.")
+            else:
+                weekly_hours = (
+                    filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"})
+                )
+                st.subheader("Weekly Hour Breakdown")
+                st.dataframe(weekly_hours)
+
+        else:
+            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
+
 # Run the app
 if __name__ == "__main__":
     main()
