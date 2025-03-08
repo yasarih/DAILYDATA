@@ -146,7 +146,8 @@ def main():
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["Date"].dt.month == month)
+            (student_data["MM"].astype(str).str.zfill(2) == str(month).zfill(2))
+
         ]
 
         if not filtered_data.empty:
