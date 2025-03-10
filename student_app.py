@@ -38,14 +38,19 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         return pd.DataFrame()
     try:
         data = sheet.get_all_values()
-        return pd.DataFrame(data[1:], columns=data[0]) if data else pd.DataFrame()
+        df = pd.DataFrame(data[1:], columns=data[0]) if data else pd.DataFrame()
+        st.write("Available columns:", df.columns.tolist())  # Debugging statement
+        return df
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return pd.DataFrame()
 
 def show_student_data(data, student_id, student_name_part):
-    if "MM" not in data.columns or "Student ID" not in data.columns:
-        st.warning("Missing required columns in data.")
+    required_columns = ["MM", "Year", "Student ID", "Student", "Date", "Subject", "Hr", "Teachers Name", "Chapter taken", "Type of class"]
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    
+    if missing_columns:
+        st.error(f"Missing required columns: {missing_columns}")
         return
     
     month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
@@ -62,13 +67,8 @@ def show_student_data(data, student_id, student_name_part):
     student_name = filtered_data["Student"].iloc[0]
     st.subheader(f"📚 Welcome, {student_name}!")
     
-    required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken", "Type of class"]
-    if any(col not in filtered_data.columns for col in required_columns):
-        st.error("Missing required columns.")
-        return
-    
     st.subheader("Your Monthly Class Data")
-    st.write(filtered_data[required_columns])
+    st.write(filtered_data[required_columns[4:]])  # Display relevant data columns
     
     total_hours = filtered_data["Hr"].astype(float).sum()
     st.write(f"**Total Hours:** {total_hours:.2f}")
