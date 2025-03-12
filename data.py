@@ -16,13 +16,6 @@ st.set_page_config(
         "About": None
     }
 )
-
-# Your Streamlit app code here
-
-
-# Your Streamlit app code goes here
-
-
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     try:
@@ -60,7 +53,6 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
         st.error(f"Unexpected error connecting to Google Sheets: {e}")
     return None
 
-# Function to fetch all data without caching to always get updated values
 # Function to fetch all data without caching to always get updated values
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
@@ -105,7 +97,6 @@ def get_merged_data_with_em():
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
     return merged_data
 
-
 # Function to show student EM data with phone numbers
 def show_student_em_table(data, teacher_name):
     """
@@ -142,9 +133,6 @@ def show_student_em_table(data, teacher_name):
 
     # Display summary stats
     st.write(f"**Total Unique Students:** {len(teacher_students)}")
-
-
-
 
 # Function to calculate salary
 def calculate_salary(row):
@@ -250,7 +238,6 @@ def show_filtered_data(filtered_data,role,data, teacher_name):
         st.write(salary_split)
         show_student_em_table(data, teacher_name)
 
-
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
     st.subheader("Your Weekly Schedule")
@@ -283,7 +270,6 @@ def show_teacher_schedule(teacher_id):
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
-    #st.write("Available columns in data:", data.columns.tolist())  # Debugging
     #st.write("Available columns in data:", data.columns.tolist())  # Debugging
 
     if "MM" in data.columns:
@@ -328,8 +314,6 @@ def manage_data(data, role):
             else:
                 st.error("Verification failed. Please check your Teacher ID and name.")
 
-
-
     elif role == "Student":
         student_id = st.text_input("Enter Student ID").strip().lower()
         student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
@@ -370,7 +354,6 @@ def manage_data(data, role):
             else:
                 st.error("Verification failed. Please check your details.")
 
-
 # Main function to handle user role selection and page display
 def main():
     
@@ -394,8 +377,6 @@ def main():
         manage_data(st.session_state.data, role)
     else:
         st.info("Please select a role from the sidebar.")
-
-
 
 if __name__ == "__main__":
     main()
