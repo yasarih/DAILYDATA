@@ -205,7 +205,7 @@ def highlight_duplicates_html(df, subset_columns):
 def show_filtered_data(filtered_data,role,data, teacher_name):
     if role == "Teacher":
         # Select relevant columns for display
-        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
+        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr","Supalearn Password"]]
         filtered_data["Hr"] = filtered_data["Hr"]
 
         # Apply row highlighting for duplicates in "Date" and "Student ID" columns
