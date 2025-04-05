@@ -300,30 +300,38 @@ def manage_data(data, role):
         teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
         if st.button("Verify Teacher"):
-            filtered_data = data[
-                (data["MM"] == month) & 
-                (data["Year"] == year) &  # Added condition to filter by year
-                (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
-                (data["Teachers Name"].str.lower().str.contains(teacher_name_part))
-            ]
+    filtered_data = data[
+        (data["MM"] == month) & 
+        (data["Year"] == year) &  # Added condition to filter by year
+        (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
+        (data["Teachers Name"].str.lower().str.contains(teacher_name_part))
+    ]
 
-            if not filtered_data.empty:
-                teacher_name = filtered_data["Teachers Name"].iloc[0]
-                st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
+    if not filtered_data.empty:
+        # Get teacher's name
+        teacher_name = filtered_data["Teachers Name"].iloc[0]
+        
+        # Get the Supalearn Password for the teacher
+        supalearn_password = filtered_data["Supalearn Password"].iloc[0]
+        
+        # Display the welcome message along with Supalearn Password
+        st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
+        st.write(f"Your Supalearn Password is: **{supalearn_password}**")
 
-                required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
-                missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+        required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
+        missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
-                if missing_columns:
-                    st.error(f"The following required columns are missing: {missing_columns}")
-                    #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
-                else:
-                    show_filtered_data(filtered_data,role,data, teacher_name)
+        if missing_columns:
+            st.error(f"The following required columns are missing: {missing_columns}")
+        else:
+            # Continue processing the data for the teacher
+            show_filtered_data(filtered_data, role, data, teacher_name)
 
-                    if teacher_id:
-                        show_teacher_schedule(teacher_id)
-            else:
-                st.error("Verification failed. Please check your Teacher ID and name.")
+            if teacher_id:
+                show_teacher_schedule(teacher_id)
+    else:
+        st.error("Verification failed. Please check your Teacher ID and name.")
+
 
     elif role == "Student":
         student_id = st.text_input("Enter Student ID").strip().lower()
