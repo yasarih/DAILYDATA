@@ -16,6 +16,7 @@ st.set_page_config(
         "About": None
     }
 )
+
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     try:
@@ -79,7 +80,8 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Error fetching data from '{worksheet_name}': {e}")
     return pd.DataFrame()
-# Function to merge student and EM data
+
+# Function to merge student and EM data, including "Supalearn Password" from main sheet
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
@@ -94,17 +96,21 @@ def get_merged_data_with_em():
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
+    # Merge data including the "Supalearn Password" from the main sheet
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
+    merged_data = merged_data.merge(main_data[['Student ID', 'Supalearn Password']], on="Student ID", how="left")
+
     return merged_data
 
-# Function to show student EM data with phone numbers
-def show_student_em_table(data, teacher_name):
+# Function to show student EM data with phone numbers and Supalearn Password for Teacher
+def show_student_em_table(data, teacher_name, role):
     """
     Display a unique list of students taken by the logged-in teacher, 
     showing their ID, name, EM, and EM's phone number.
     Args:
     - data: Merged DataFrame containing student and EM details.
     - teacher_name: Name of the logged-in teacher.
+    - role: Role of the logged-in user ('Teacher' or 'Student').
     """
     st.subheader(f"Unique List of Students for Teacher: {teacher_name}")
 
@@ -124,8 +130,13 @@ def show_student_em_table(data, teacher_name):
     # Remove duplicate students
     teacher_students = teacher_students.drop_duplicates(subset=["Student ID", "Student"])
 
-    # Select relevant columns
+    # Select relevant columns for display
     display_columns = ["Student ID", "Student", "EM", "Phone Number"]
+    
+    # Add "Supalearn Password" if the role is Teacher
+    if role == "Teacher":
+        display_columns.append("Supalearn Password")
+    
     teacher_students = teacher_students[display_columns]
 
     # Display the unique list of students
@@ -356,7 +367,6 @@ def manage_data(data, role):
 
 # Main function to handle user role selection and page display
 def main():
-    
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Angle Belearn: Your Daily Class Insights")
 
