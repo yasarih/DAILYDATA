@@ -143,7 +143,7 @@ def show_student_em_table(data, teacher_name, role):
     # Display the unique list of students
     st.write(teacher_students)
 
-    # Display summary stats
+    # Display suMMary stats
     st.write(f"**Total Unique Students:** {len(teacher_students)}")
 
 # Function to calculate salary
@@ -271,7 +271,7 @@ def show_teacher_schedule(teacher_id):
             st.error(f"Error loading {day} schedule: {e}")
 
     if not schedule_data.empty:
-        # Combine duplicate entries by concatenating 'Student ID' with a comma separator
+        # Combine duplicate entries by concatenating 'Student ID' with a coMMa separator
         schedule_data = schedule_data.groupby(['Time Slot', 'Day'])['Student ID'].apply(lambda x: ', '.join(x)).reset_index()
 
         # Perform pivot operation after handling duplicates
