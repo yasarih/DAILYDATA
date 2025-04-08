@@ -16,12 +16,10 @@ st.set_page_config(
         "About": None
     }
 )
-
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     try:
-        credentials_info = dict(st.secrets["google_credentials_new_project"])
-
+        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
         return credentials_info
     except KeyError:
         st.error("Google credentials not found in Streamlit secrets.")
@@ -81,11 +79,10 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Error fetching data from '{worksheet_name}': {e}")
     return pd.DataFrame()
-
-# Function to merge student and EM data, including "Supalearn Password" from main sheet
+# Function to merge student and EM data
 def get_merged_data_with_em():
-    main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
-    em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
+    main_data = fetch_data_from_sheet("1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w", "Student class details")
+    em_data = fetch_data_from_sheet("1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w", "Student Data")
 
     if main_data.empty:
         st.warning("Main data is empty. Please check the 'Student class details' sheet.")
@@ -97,21 +94,17 @@ def get_merged_data_with_em():
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
-    # Merge data including the "Supalearn Password" from the main sheet
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
-    merged_data = merged_data.merge(main_data[['Student ID', 'Supalearn Password']], on="Student ID", how="left")
-
     return merged_data
 
-# Function to show student EM data with phone numbers and Supalearn Password for Teacher
-def show_student_em_table(data, teacher_name, role):
+# Function to show student EM data with phone numbers
+def show_student_em_table(data, teacher_name):
     """
     Display a unique list of students taken by the logged-in teacher, 
     showing their ID, name, EM, and EM's phone number.
     Args:
     - data: Merged DataFrame containing student and EM details.
     - teacher_name: Name of the logged-in teacher.
-    - role: Role of the logged-in user ('Teacher' or 'Student').
     """
     st.subheader(f"Unique List of Students for Teacher: {teacher_name}")
 
@@ -131,19 +124,14 @@ def show_student_em_table(data, teacher_name, role):
     # Remove duplicate students
     teacher_students = teacher_students.drop_duplicates(subset=["Student ID", "Student"])
 
-    # Select relevant columns for display
+    # Select relevant columns
     display_columns = ["Student ID", "Student", "EM", "Phone Number"]
-    
-    # Add "Supalearn Password" if the role is Teacher
-    if role == "Teacher":
-        display_columns.append("Supalearn Password")
-    
     teacher_students = teacher_students[display_columns]
 
     # Display the unique list of students
     st.write(teacher_students)
 
-    # Display suMMary stats
+    # Display summary stats
     st.write(f"**Total Unique Students:** {len(teacher_students)}")
 
 # Function to calculate salary
@@ -214,7 +202,7 @@ def highlight_duplicates_html(df, subset_columns):
 
 # Example usage inside the show_filtered_data function
 # Function to display filtered data based on the role (Student or Teacher)
-def show_filtered_data(filtered_data, role, data, teacher_name):
+def show_filtered_data(filtered_data,role,data, teacher_name):
     if role == "Teacher":
         # Select relevant columns for display
         filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
@@ -248,7 +236,7 @@ def show_filtered_data(filtered_data, role, data, teacher_name):
         }).reset_index()
         st.subheader("Salary Breakdown by Class and Board")
         st.write(salary_split)
-        show_student_em_table(data, teacher_name, role)
+        show_student_em_table(data, teacher_name)
 
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
@@ -271,7 +259,7 @@ def show_teacher_schedule(teacher_id):
             st.error(f"Error loading {day} schedule: {e}")
 
     if not schedule_data.empty:
-        # Combine duplicate entries by concatenating 'Student ID' with a coMMa separator
+        # Combine duplicate entries by concatenating 'Student ID' with a comma separator
         schedule_data = schedule_data.groupby(['Time Slot', 'Day'])['Student ID'].apply(lambda x: ', '.join(x)).reset_index()
 
         # Perform pivot operation after handling duplicates
@@ -279,10 +267,10 @@ def show_teacher_schedule(teacher_id):
         st.write(schedule_pivot)
     else:
         st.write("No active schedule found for this teacher.")
-
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
+    #st.write("Available columns in data:", data.columns.tolist())  # Debugging
 
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
@@ -310,20 +298,16 @@ def manage_data(data, role):
 
             if not filtered_data.empty:
                 teacher_name = filtered_data["Teachers Name"].iloc[0]
-                # Fetch the Supalearn Password for the teacher
-                supalearn_password = filtered_data["Supalearn Password"].iloc[0]
-
-                # Display the welcome message along with Supalearn Password
                 st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
-                st.write(f"Your Supalearn Password is: **{supalearn_password}**")
 
                 required_columns = ["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]
                 missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
                 if missing_columns:
                     st.error(f"The following required columns are missing: {missing_columns}")
+                    #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
                 else:
-                    show_filtered_data(filtered_data, role, data, teacher_name)
+                    show_filtered_data(filtered_data,role,data, teacher_name)
 
                     if teacher_id:
                         show_teacher_schedule(teacher_id)
@@ -344,6 +328,7 @@ def manage_data(data, role):
                 student_name = filtered_data["Student"].iloc[0]
                 st.subheader(f"👨‍🎓 Welcome, {student_name}!")
 
+                # Check for required columns
                 required_columns = ["Date", "Subject", "Hr", "Teachers Name", "Chapter taken", "Type of class"]
                 missing_columns = [col for col in required_columns if col not in filtered_data.columns]
 
@@ -371,6 +356,7 @@ def manage_data(data, role):
 
 # Main function to handle user role selection and page display
 def main():
+    
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Angle Belearn: Your Daily Class Insights")
 
