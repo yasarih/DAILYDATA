@@ -85,7 +85,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 
 # Function to merge student and EM data, including "Supalearn Password" from main sheet
 def get_merged_data_with_em():
-    main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details_data")
+    main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
 
     if main_data.empty:
