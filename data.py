@@ -5,25 +5,6 @@ import pandas as pd
 import numpy as np
 import json
 
-creds_dict = st.secrets["google_credentials_new_project"]
-scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-
-credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-
-# Connect to Google Sheets
-gc = gspread.authorize(credentials)
-
-# Open the sheet by URL or name
-sheet = gc.open_by_url("https://docs.google.com/spreadsheets/d/1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4/edit#gid=0")
-worksheet = sheet.get_worksheet(0)  # First sheet
-
-# Convert to DataFrame
-data = worksheet.get_all_records()
-df = pd.DataFrame(data)
-
-# Show in Streamlit
-st.title("Google Sheet Data (Private Sheet Access)")
-st.dataframe(df)
 
 # Set page layout and title
 st.set_page_config(
