@@ -46,6 +46,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
             scopes=scopes
         )
         client = gspread.authorize(credentials)
+        st.write("client",client)
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
     except gspread.exceptions.SpreadsheetNotFound:
