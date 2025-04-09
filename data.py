@@ -21,6 +21,7 @@ st.set_page_config(
 def load_credentials_from_secrets():
     try:
         credentials_info = dict(st.secrets["google_credentials_new_project"])
+        st.write("cccccccccccc",credentials_info)
 
         return credentials_info
     except KeyError:
