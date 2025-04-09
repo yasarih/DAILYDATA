@@ -247,6 +247,7 @@ def manage_data(data, role):
     else:
         st.warning("Month data ('MM' column) not found. Available columns are:")
         st.write(data.columns.tolist())  # Show available columns
+        # Optionally, you could choose a fallback approach like selecting a different column.
         return
 
     if role == "Teacher":
@@ -288,8 +289,8 @@ def manage_data(data, role):
         student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
         if st.button("Verify Student"):
-            filtered_data = data[(data["MM"] == month) &
-                                 (data["Student ID"].str.lower().str.strip() == student_id) &
+            filtered_data = data[(data["MM"] == month) & 
+                                 (data["Student ID"].str.lower().str.strip() == student_id) & 
                                  (data["Student"].str.lower().str.contains(student_name_part))]
 
             if not filtered_data.empty:
