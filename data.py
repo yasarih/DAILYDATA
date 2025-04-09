@@ -382,15 +382,20 @@ def main():
         # Clear cached data if it exists to ensure a fresh fetch
         st.session_state.data = get_merged_data_with_em()  # Forcefully reload data from Google Sheets
         st.success("Data refreshed successfully!")
+        st.write("DATA",st.session_state.data)
 
     # Load data if it is not already in session state
     if "data" not in st.session_state:
         st.session_state.data = get_merged_data_with_em()
+        st.write("DATA2",st.session_state.data)
+
 
     # Role selection and data management
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
     if role != "Select":
+        st.write("DATA3",st.session_state.data)
+
         manage_data(st.session_state.data, role)
     else:
         st.info("Please select a role from the sidebar.")
