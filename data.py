@@ -5,6 +5,12 @@ import pandas as pd
 import numpy as np
 import json
 
+url = "https://docs.google.com/spreadsheets/d/1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4/gviz/tq?tqx=out:csv"
+df = pd.read_csv(url)
+
+st.title("Google Sheet Data")
+st.write(df)
+
 # Set page layout and title
 st.set_page_config(
     page_title="Angle Belearn Insights",
@@ -21,7 +27,6 @@ st.set_page_config(
 def load_credentials_from_secrets():
     try:
         credentials_info = dict(st.secrets["google_credentials_new_project"])
-        st.write("cccccccccccc",credentials_info)
 
         return credentials_info
     except KeyError:
