@@ -16,13 +16,18 @@ st.set_page_config(
         "About": None
     }
 )
+
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     try:
-        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        return credentials_info
-    except KeyError:
-        st.error("Google credentials not found in Streamlit secrets.")
+        if "google_credentials_new_project" in st.secrets:
+            credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
+            return credentials_info
+        else:
+            st.error("Google credentials not found in Streamlit secrets.")
+            return None
+    except Exception as e:
+        st.error(f"Error loading credentials: {e}")
         return None
 
 # Function to connect to Google Sheets using the credentials from secrets for the new project
@@ -79,6 +84,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     except Exception as e:
         st.error(f"Error fetching data from '{worksheet_name}': {e}")
     return pd.DataFrame()
+
 # Function to merge student and EM data
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w", "Student class details")
@@ -200,44 +206,6 @@ def highlight_duplicates_html(df, subset_columns):
 
     return styled_table
 
-# Example usage inside the show_filtered_data function
-# Function to display filtered data based on the role (Student or Teacher)
-def show_filtered_data(filtered_data,role,data, teacher_name):
-    if role == "Teacher":
-        # Select relevant columns for display
-        filtered_data = filtered_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class", "Hr"]]
-        filtered_data["Hr"] = filtered_data["Hr"]
-
-        # Apply row highlighting for duplicates in "Date" and "Student ID" columns
-        if "Date" in filtered_data.columns and "Student ID" in filtered_data.columns:
-            filtered_data['Duplicate'] = filtered_data.duplicated(subset=["Date", "Student ID"], keep=False)
-        else:
-            st.error("Required columns 'Date' or 'Student ID' not found in the data.")
-            return
-
-        # Generate HTML with highlighting and display in Streamlit
-        styled_table_html = highlight_duplicates_html(filtered_data, subset_columns=["Date", "Student ID"])
-
-        st.subheader("Daily Class Data")
-        st.markdown(styled_table_html, unsafe_allow_html=True)
-
-        # Drop the 'Duplicate' column safely if it exists
-        filtered_data = filtered_data.drop(columns=['Duplicate'], errors='ignore')
-
-        # Calculate and display salary
-        filtered_data['Salary'] = filtered_data.apply(calculate_salary, axis=1)
-        total_salary = filtered_data['Salary'].sum()
-        total_hours = filtered_data["Hr"].sum()
-        st.write(f"**Total Hours:** {total_hours:.2f}")
-        st.write(f"**Total Salary (_It is based on rough calculations and may change as a result._):** ₹{total_salary:.2f}")
-
-        salary_split = filtered_data.groupby(['Class', 'Syllabus', 'Type of class']).agg({
-            'Hr': 'sum', 'Salary': 'sum'
-        }).reset_index()
-        st.subheader("Salary Breakdown by Class and Board")
-        st.write(salary_split)
-        show_student_em_table(data, teacher_name)
-
 # Function to show teacher's weekly schedule from the schedule sheet
 def show_teacher_schedule(teacher_id):
     st.subheader("Your Weekly Schedule")
@@ -267,7 +235,8 @@ def show_teacher_schedule(teacher_id):
         st.write(schedule_pivot)
     else:
         st.write("No active schedule found for this teacher.")
-# Function to manage data based on the selected role
+
+# Function to manage data based on the selected role (Student or Teacher)
 def manage_data(data, role):
     st.subheader(f"{role} Data")
     #st.write("Available columns in data:", data.columns.tolist())  # Debugging
@@ -289,7 +258,7 @@ def manage_data(data, role):
         teacher_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
 
         if st.button("Verify Teacher"):
-            filtered_data = data[
+            filtered_data = data[ 
                 (data["MM"] == month) & 
                 (data["Year"] == year) &  # Added condition to filter by year
                 (data["Teachers ID"].str.lower().str.strip() == teacher_id) &
@@ -307,13 +276,12 @@ def manage_data(data, role):
                     st.error(f"The following required columns are missing: {missing_columns}")
                     #st.write("Available columns in filtered_data:", filtered_data.columns.tolist())
                 else:
-                    show_filtered_data(filtered_data,role,data, teacher_name)
+                    show_filtered_data(filtered_data, role, data, teacher_name)
 
                     if teacher_id:
                         show_teacher_schedule(teacher_id)
             else:
                 st.error("Verification failed. Please check your Teacher ID and name.")
-
     elif role == "Student":
         student_id = st.text_input("Enter Student ID").strip().lower()
         student_name_part = st.text_input("Enter any part of your name (minimum 4 characters)").strip().lower()
