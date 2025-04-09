@@ -21,7 +21,8 @@ st.set_page_config(
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     try:
-        credentials_info = dict(st.secrets["google_credentials_new_project"])
+        # credentials_info = dict(st.secrets["google_credentials_new_project"])
+        credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
 
         return credentials_info
     except KeyError:
