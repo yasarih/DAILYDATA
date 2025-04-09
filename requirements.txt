@@ -1,5 +1,5 @@
-google-api-python-client
-google-auth
-google-auth-httplib2
-google-auth-oauthlib
+streamlit
 gspread
+oauth2client
+pandas
+google-auth
