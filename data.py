@@ -8,6 +8,7 @@ import json
 # Function to load credentials from Streamlit secrets for the new project
 def load_credentials_from_secrets():
     credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
+    print("c",credentials_info)
     return credentials_info
 
 # Function to connect to Google Sheets using the credentials from secrets for the new project
@@ -119,7 +120,7 @@ def main():
     st.title("Welcome to the Web App")
 
     # Sheet and headers details
-    spreadsheet_name = 'Student Daily Class Details 2024'
+    spreadsheet_name = 'dailyDataForStreamlit'
     worksheet_name = 'Student class details'
     expected_headers = ["Year", "MM", "Date", "Student id", "Student", "Hr", "Teachers ID", "Teachers Name", "Class", "Syllabus", "Subject", "Chapter taken"]
 
