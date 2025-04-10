@@ -315,7 +315,7 @@ def manage_data(data, role):
                 print("ffffffffffff",filtered_data)
                 teacher_name = filtered_data["Teachers Name"].iloc[0]
                 # Fetch the Supalearn Password for the teacher
-                supalearn_password = filtered_data["Supalearn Password"].iloc[0]
+                supalearn_password = filtered_data["Supalearn Password_y"].iloc[0]
 
                 # Display the welcome message along with Supalearn Password
                 st.subheader(f"👩‍🏫 Welcome, {teacher_name}!")
