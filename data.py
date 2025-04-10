@@ -137,9 +137,7 @@ def show_student_em_table(data, teacher_name, role):
     # Select relevant columns for display
     display_columns = ["Student ID", "Student", "EM", "Phone Number"]
     
-    # Add "Supalearn Password" if the role is Teacher
-    if role == "Teacher":
-        
+    
     
     teacher_students = teacher_students[display_columns]
 
