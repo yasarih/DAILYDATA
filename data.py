@@ -83,11 +83,13 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     return pd.DataFrame()
 
 # Function to merge student and EM data, including "Supalearn Password" from main sheet
+# Function to merge student and EM data for teacher view, without duplicating rows or merging Supalearn Password unnecessarily
 def get_merged_data_with_em():
+    # Fetch main and EM data from the Google Sheet
     main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
- 
 
+    # Show warning if either dataset is empty
     if main_data.empty:
         st.warning("Main data is empty. Please check the 'Student class details' sheet.")
     if em_data.empty:
@@ -95,14 +97,22 @@ def get_merged_data_with_em():
     if main_data.empty or em_data.empty:
         return pd.DataFrame()
 
+    # Rename columns for consistency
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
 
-    # Merge data including the "Supalearn Password" from the main sheet
+    # Merge main and EM data on Student ID
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
-    merged_data = merged_data.merge(main_data[['Student ID', 'Supalearn Password']], on="Student ID", how="left")
+
+    # ✅ DO NOT merge Supalearn Password back into student rows — it's already present in main_data and used for teacher only
+    # ❌ Remove this line (causes duplication):
+    # merged_data = merged_data.merge(main_data[['Student ID', 'Supalearn Password']], on="Student ID", how="left")
+
+    # Drop duplicates to ensure clean data
+    merged_data = merged_data.drop_duplicates()
 
     return merged_data
+
 
 # Function to show student EM data with phone numbers and Supalearn Password for Teacher
 def show_student_em_table(data, teacher_name, role):
