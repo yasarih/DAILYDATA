@@ -312,6 +312,7 @@ def manage_data(data, role):
             ]
 
             if not filtered_data.empty:
+                print("ffffffffffff",filtered_data)
                 teacher_name = filtered_data["Teachers Name"].iloc[0]
                 # Fetch the Supalearn Password for the teacher
                 supalearn_password = filtered_data["Supalearn Password"].iloc[0]
