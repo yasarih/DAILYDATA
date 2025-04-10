@@ -139,7 +139,7 @@ def show_student_em_table(data, teacher_name, role):
     
     # Add "Supalearn Password" if the role is Teacher
     if role == "Teacher":
-        display_columns.append("Supalearn Password_y")
+        
     
     teacher_students = teacher_students[display_columns]
 
