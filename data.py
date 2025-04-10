@@ -286,9 +286,6 @@ def show_teacher_schedule(teacher_id):
 # Function to manage data based on the selected role
 def manage_data(data, role):
     st.subheader(f"{role} Data")
-    print("role",role,data)
-    st.write(data)
-    st.write(role)
 
     if "MM" in data.columns:
         month = st.sidebar.selectbox("Select Month", sorted(data["MM"].unique()))
