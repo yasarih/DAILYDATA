@@ -33,13 +33,13 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     if not credentials_info:
         return None
  
-     scopes = [
+    scopes = [
          "https://www.googleapis.com/auth/spreadsheets",
          "https://www.googleapis.com/auth/drive",
          "https://www.googleapis.com/auth/drive.file"
      ]
  
-     try:
+    try:
          credentials = Credentials.from_service_account_info(
              credentials_info,
              scopes=scopes
@@ -47,9 +47,9 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
          client = gspread.authorize(credentials)
          sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
          return sheet
-     except gspread.exceptions.SpreadsheetNotFound:
+    except gspread.exceptions.SpreadsheetNotFound:
          st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
-     except gspread.exceptions.WorksheetNotFound:
+    except gspread.exceptions.WorksheetNotFound:
          st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
      except Exception as e:
          st.error(f"Unexpected error connecting to Google Sheets: {e}")
