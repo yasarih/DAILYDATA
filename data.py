@@ -19,19 +19,19 @@ st.set_page_config(
  )
  
  # Function to load credentials from Streamlit secrets for the new project
- def load_credentials_from_secrets():
-     try:
-         credentials_info = dict(st.secrets["google_credentials_new_project"])
-         return credentials_info
-     except KeyError:
-         st.error("Google credentials not found in Streamlit secrets.")
-         return None
+def load_credentials_from_secrets():
+    try:
+        credentials_info = dict(st.secrets["google_credentials_new_project"])
+        return credentials_info
+    except KeyError:
+        st.error("Google credentials not found in Streamlit secrets.")
+        return None
  
  # Function to connect to Google Sheets using the credentials from secrets for the new project
- def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-     credentials_info = load_credentials_from_secrets()
-     if not credentials_info:
-         return None
+def connect_to_google_sheets(spreadsheet_id, worksheet_name):
+    credentials_info = load_credentials_from_secrets()
+    if not credentials_info:
+        return None
  
      scopes = [
          "https://www.googleapis.com/auth/spreadsheets",
