@@ -376,7 +376,7 @@ def manage_data(data, role):
 # Main function to handle user role selection and page display
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
-    st.title("Angle Belearn: Your Daily Class Insights")
+    st.title("The app is updating, so there might be some errors right now")
 
     # Refresh Data button in the sidebar
     if st.sidebar.button("Refresh Data"):
