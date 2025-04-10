@@ -7,7 +7,7 @@ import json
  
  
  # Set page layout and title
- st.set_page_config(
+st.set_page_config(
      page_title="Angle Belearn Insights",
      page_icon="🎓",
      layout="wide",
