@@ -22,9 +22,6 @@ st.set_page_config(
 def load_credentials_from_secrets():
     try:
         credentials_info = dict(st.secrets["google_credentials_new_project"])
-        print("ccccccccccccccccc",credentials_info)
-        # credentials_info1 = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        # print("ccccccccccc2",credentials_info1)
         return credentials_info
     except KeyError:
         st.error("Google credentials not found in Streamlit secrets.")
@@ -89,10 +86,9 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 
 # Function to merge student and EM data, including "Supalearn Password" from main sheet
 def get_merged_data_with_em():
-    main_data = fetch_data_from_sheet("1c6Nybs4I08MYoyv4b9Cv8uqqkR365gU4ppsHa6qgYOk", "test")
-
-    # main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
+    main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
+    print("mmmmmmmmmmmm",main_data)
 
     if main_data.empty:
         st.warning("Main data is empty. Please check the 'Student class details' sheet.")
