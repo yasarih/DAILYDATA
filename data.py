@@ -45,9 +45,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
             scopes=scopes
         )
         client = gspread.authorize(credentials)
-        st.write("client",client)
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
-        print("sheet",sheet)
         return sheet
     except gspread.exceptions.SpreadsheetNotFound:
         st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
@@ -89,6 +87,8 @@ def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
     print("mmmmmmmmmmmm",main_data)
+    print("mmmmmmmmmmmm",em_data)
+
 
     if main_data.empty:
         st.warning("Main data is empty. Please check the 'Student class details' sheet.")
