@@ -23,8 +23,8 @@ def load_credentials_from_secrets():
     try:
         credentials_info = dict(st.secrets["google_credentials_new_project"])
         print("ccccccccccccccccc",credentials_info)
-        credentials_info1 = json.loads(st.secrets["google_credentials_new_project"]["data"])
-        print("ccccccccccc2",credentials_info1)
+        # credentials_info1 = json.loads(st.secrets["google_credentials_new_project"]["data"])
+        # print("ccccccccccc2",credentials_info1)
         return credentials_info
     except KeyError:
         st.error("Google credentials not found in Streamlit secrets.")
