@@ -86,9 +86,7 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
-    print("mmmmmmmmmmmm",main_data)
-    print("mmmmmmmmmmmm",em_data)
-
+ 
 
     if main_data.empty:
         st.warning("Main data is empty. Please check the 'Student class details' sheet.")
@@ -310,7 +308,6 @@ def manage_data(data, role):
             ]
 
             if not filtered_data.empty:
-                print("ffffffffffff",filtered_data)
                 teacher_name = filtered_data["Teachers Name"].iloc[0]
                 # Fetch the Supalearn Password for the teacher
                 supalearn_password = filtered_data["Supalearn Password_y"].iloc[0]
