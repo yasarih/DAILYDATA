@@ -3,17 +3,11 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
-import json
 
 st.set_page_config(
     page_title="Angle Belearn Insights",
     page_icon="🎓",
-    layout="wide",
-    menu_items={
-        "Get Help": None,
-        "Report a bug": None,
-        "About": None
-    }
+    layout="wide"
 )
 
 def load_credentials_from_secrets():
@@ -36,25 +30,17 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     ]
 
     try:
-        credentials = Credentials.from_service_account_info(
-            credentials_info,
-            scopes=scopes
-        )
+        credentials = Credentials.from_service_account_info(credentials_info, scopes=scopes)
         client = gspread.authorize(credentials)
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
-    except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
     except Exception as e:
-        st.error(f"Unexpected error connecting to Google Sheets: {e}")
+        st.error(f"Error connecting to Google Sheets: {e}")
     return None
 
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
-        st.warning(f"Could not establish a connection to the worksheet '{worksheet_name}'.")
         return pd.DataFrame()
     try:
         data = sheet.get_all_values()
@@ -69,13 +55,8 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
             if 'Hr' in df.columns:
                 df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
             return df
-        else:
-            st.warning(f"No data found in worksheet '{worksheet_name}'.")
-            return pd.DataFrame()
-    except gspread.exceptions.APIError as api_error:
-        st.error(f"Google Sheets API error fetching data from '{worksheet_name}': {api_error}")
     except Exception as e:
-        st.error(f"Error fetching data from '{worksheet_name}': {e}")
+        st.error(f"Error fetching data: {e}")
     return pd.DataFrame()
 
 def get_merged_data_with_em():
@@ -83,16 +64,12 @@ def get_merged_data_with_em():
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
 
     if main_data.empty or em_data.empty:
-        st.warning("Main or EM data is empty. Please check the sheets.")
         return pd.DataFrame()
 
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
-
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
-    merged_data = merged_data.drop_duplicates()
-
-    return merged_data
+    return merged_data.drop_duplicates()
 
 def get_teacher_password(data, teacher_name):
     teacher_data = data[data['Teachers Name'].str.lower() == teacher_name.lower()]
@@ -103,49 +80,21 @@ def get_teacher_password(data, teacher_name):
     return None
 
 def calculate_salary(row, rates):
-    name = str(row['Name']).strip().lower()
-    hours = float(row['Hours'])
-    student_info = str(row['Student ID']).lower()
-
-    if teacher_name.lower() not in name:
-        return 0
-
-    if 'demo class i - iv' in student_info:
-        return hours * rates['demo_i_iv']
-    elif 'demo class v - x' in student_info:
-        return hours * rates['demo_v_x']
-    elif 'demo class xi - xii' in student_info:
-        return hours * rates['demo_xi_xii']
-    elif 'class i - iv' in student_info:
-        return hours * rates['i_iv']
-    elif 'class v - x' in student_info:
-        return hours * rates['v_x']
-    elif 'class xi - xii' in student_info:
-        return hours * rates['xi_xii']
-    else:
-        return 0
-
-
-# When the user clicks the calculate button
-if st.button("Calculate Salary"):
-    if not teacher_name:
-        st.warning("Please enter the teacher's name.")
-    else:
-        # Apply salary calculation
-        df['Salary'] = df.apply(calculate_salary, axis=1)
-
-        # Filter only positive salary rows (relevant teacher)
-        filtered_df = df[df['Salary'] > 0]
-
-        # Sum the salary
-        total_salary = filtered_df['Salary'].sum()
-
-        # Display the result
-        st.success(f"The total salary for {teacher_name} is ₹{total_salary}")
-
-        # Optional: Show the detailed breakdown
-        st.subheader("Detailed Breakdown")
-        st.write(filtered_df[["Class", "Syllabus", "Type of class", 'Hours', 'Salary']])
+    hours = float(row['Hr'])
+    type_of_class = str(row['Type of class']).lower()
+    if 'demo class i - iv' in type_of_class:
+        return hours * rates.get('demo_i_iv', 0)
+    elif 'demo class v - x' in type_of_class:
+        return hours * rates.get('demo_v_x', 0)
+    elif 'demo class xi - xii' in type_of_class:
+        return hours * rates.get('demo_xi_xii', 0)
+    elif 'class i - iv' in type_of_class:
+        return hours * rates.get('other_1_4', 0)
+    elif 'class v - x' in type_of_class:
+        return hours * rates.get('other_5_10', 0)
+    elif 'class xi - xii' in type_of_class:
+        return hours * rates.get('other_11_12', 0)
+    return 0
 
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
@@ -153,7 +102,7 @@ def main():
 
     if st.sidebar.button("Refresh Data"):
         st.session_state.data = get_merged_data_with_em()
-        st.success("Data refreshed successfully!")
+        st.success("Data refreshed!")
 
     if "data" not in st.session_state:
         st.session_state.data = get_merged_data_with_em()
@@ -162,7 +111,6 @@ def main():
 
     if role == "Teacher":
         data = st.session_state.data
-
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
 
@@ -184,13 +132,10 @@ def main():
         if st.session_state.logged_in:
             teacher_name = st.session_state.teacher_name
             filtered = st.session_state.filtered_data
-
             st.subheader(f"Welcome, {teacher_name}!")
+
             password = get_teacher_password(filtered, teacher_name)
-            if password:
-                st.write(f"Your Supalearn UserID is: **{password}**")
-            else:
-                st.write("Supalearn Password not found.")
+            st.write(f"Your Supalearn UserID is: **{password}**" if password else "Supalearn Password not found.")
 
             class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
             st.dataframe(class_summary)
@@ -200,31 +145,25 @@ def main():
 
             st.markdown("### Input Your Rates:")
             rates = {
-    'paid': st.number_input("Rate per Paid Class (default 100)", value=100),
-    'demo_i_iv': st.number_input("Rate for Demo Class I - IV", value=120),
-    'demo_v_x': st.number_input("Rate for Demo Class V - X", value=150),
-    'demo_xi_xii': st.number_input("Rate for Demo Class XI - XII", value=180),
-    'ib_1_4': st.number_input("Class 1-4 Rate (IB/IGCSE)", value=120),
-    'ib_5_7': st.number_input("Class 5-7 Rate (IB/IGCSE)", value=140),
-    'ib_8_10': st.number_input("Class 8-10 Rate (IB/IGCSE)", value=160),
-    'ib_11_13': st.number_input("Class 11-13 Rate (IB/IGCSE)", value=200),
-    'other_1_4': st.number_input("Class 1-4 Rate (Other Syllabus)", value=100),
-    'other_5_10': st.number_input("Class 5-10 Rate (Other Syllabus)", value=120),
-    'other_11_12': st.number_input("Class 11-12 Rate (Other Syllabus)", value=150),
-}
+                'demo_i_iv': st.number_input("Demo Class I - IV", value=120),
+                'demo_v_x': st.number_input("Demo Class V - X", value=150),
+                'demo_xi_xii': st.number_input("Demo Class XI - XII", value=180),
+                'other_1_4': st.number_input("Class I - IV (Other)", value=100),
+                'other_5_10': st.number_input("Class V - X (Other)", value=120),
+                'other_11_12': st.number_input("Class XI - XII (Other)", value=150)
+            }
 
+            if st.button("Calculate Salary"):
+                class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
+                total_salary = class_summary['Salary'].sum()
 
-            class_summary["Salary"] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
-            total_salary = class_summary["Salary"].sum()
-
-            st.write("## Salary Summary")
-            st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
-            st.write(f"### Total Salary: **₹ {total_salary}**")
+                st.write("## Salary Summary")
+                st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
+                st.success(f"### Total Salary: ₹ {total_salary:.2f}")
 
     elif role == "Student":
         st.subheader("Student Login")
-        st.write("(Student interface coming soon...)")
-
+        st.info("(Student interface coming soon...)")
     else:
         st.info("Please select a role from the sidebar.")
 
