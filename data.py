@@ -190,18 +190,20 @@ def main():
             st.write(f"Total Hours: **{total_hours}**")
 
             st.markdown("### Input Your Rates:")
-            rates = {
-                'paid': st.number_input("Rate per Paid Class (default 100)", value=100),
-                'demo_i_x': st.number_input("Rate for Demo Class I - X", value=150),
-                'demo_xi_xii': st.number_input("Rate for Demo Class XI - XII", value=180),
-                'ib_1_4': st.number_input("Class 1-4 Rate (IB/IGCSE)", value=120),
-                'ib_5_7': st.number_input("Class 5-7 Rate (IB/IGCSE)", value=150),
-                'ib_8_10': st.number_input("Class 8-10 Rate (IB/IGCSE)", value=170),
-                'ib_11_13': st.number_input("Class 11-13 Rate (IB/IGCSE)", value=200),
-                'other_1_4': st.number_input("Class 1-4 Rate (Other)", value=120),
-                'other_5_10': st.number_input("Class 5-10 Rate (Other)", value=150),
-                'other_11_12': st.number_input("Class 11-12 Rate (Other)", value=180)
-            }
+           rates = {
+    'paid': st.number_input("Rate per Paid Class (default 100)", value=100),
+    'demo_i_iv': st.number_input("Rate for Demo Class I - IV", value=120),
+    'demo_v_x': st.number_input("Rate for Demo Class V - X", value=150),
+    'demo_xi_xii': st.number_input("Rate for Demo Class XI - XII", value=180),
+    'ib_1_4': st.number_input("Class 1-4 Rate (IB/IGCSE)", value=120),
+    'ib_5_7': st.number_input("Class 5-7 Rate (IB/IGCSE)", value=140),
+    'ib_8_10': st.number_input("Class 8-10 Rate (IB/IGCSE)", value=160),
+    'ib_11_13': st.number_input("Class 11-13 Rate (IB/IGCSE)", value=200),
+    'other_1_4': st.number_input("Class 1-4 Rate (Other Syllabus)", value=100),
+    'other_5_10': st.number_input("Class 5-10 Rate (Other Syllabus)", value=120),
+    'other_11_12': st.number_input("Class 11-12 Rate (Other Syllabus)", value=150),
+}
+
 
             class_summary["Salary"] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
             total_salary = class_summary["Salary"].sum()
