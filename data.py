@@ -102,18 +102,14 @@ def get_teacher_password(data, teacher_name):
             return password_series.iloc[0]
     return None
 
-def calculate_salary(row):
-    name = str(row['Name']).strip().lower()  # ensure it's lowercase
-    hours = float(row['Hours'])  # ensure it's float
-    # Debug
-    # st.write(f"Processing: {name} | Hours: {hours}")
+def calculate_salary(row, rates):
+    name = str(row['Name']).strip().lower()
+    hours = float(row['Hours'])
+    student_info = str(row['Student ID']).lower()
 
     if teacher_name.lower() not in name:
         return 0
 
-    student_info = str(row['Student ID']).lower()  # Assuming 'Student ID' contains class info
-
-    # Check which class and assign rate
     if 'demo class i - iv' in student_info:
         return hours * rates['demo_i_iv']
     elif 'demo class v - x' in student_info:
@@ -128,6 +124,7 @@ def calculate_salary(row):
         return hours * rates['xi_xii']
     else:
         return 0
+
 
 # When the user clicks the calculate button
 if st.button("Calculate Salary"):
