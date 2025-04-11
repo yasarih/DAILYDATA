@@ -108,6 +108,75 @@ def get_teacher_password(data, teacher_name):
             return password_series.iloc[0]
     return None
 
+st.subheader("💰 Salary Calculator")
+
+# Step 1: Take all rates as input
+st.markdown("### Input Your Rates:")
+
+paid_class_rate = st.number_input("Rate per Paid Class (default 100)", value=100)
+
+demo_i_x_rate = st.number_input("Rate for Demo Class I - X", value=150)
+demo_xi_xii_rate = st.number_input("Rate for Demo Class XI - XII", value=180)
+
+st.markdown("#### Rates for IB / IGCSE Classes:")
+ib_1_4 = st.number_input("Class 1-4 Rate (IB/IGCSE)", value=120)
+ib_5_7 = st.number_input("Class 5-7 Rate (IB/IGCSE)", value=150)
+ib_8_10 = st.number_input("Class 8-10 Rate (IB/IGCSE)", value=170)
+ib_11_13 = st.number_input("Class 11-13 Rate (IB/IGCSE)", value=200)
+
+st.markdown("#### Rates for Other Syllabus Classes:")
+other_1_4 = st.number_input("Class 1-4 Rate (Other)", value=120)
+other_5_10 = st.number_input("Class 5-10 Rate (Other)", value=150)
+other_11_12 = st.number_input("Class 11-12 Rate (Other)", value=180)
+
+# Step 2: Define salary calculation function using inputs
+def calculate_salary(row):
+    student_id = row['Student ID'].strip().lower()
+    syllabus = row['Syllabus'].strip().lower()
+    class_type = row['Type of class'].strip().lower()
+    hours = row['Hr']
+
+    if 'demo class i - x' in student_id:
+        return hours * demo_i_x_rate
+    elif 'demo class xi - xii' in student_id:
+        return hours * demo_xi_xii_rate
+    elif class_type.startswith("paid"):
+        return hours * 4 * paid_class_rate
+    else:
+        class_level = int(row['Class']) if row['Class'].isdigit() else None
+        if class_level is None:
+            return 0
+
+        if syllabus in ['igcse', 'ib']:
+            if 1 <= class_level <= 4:
+                return hours * ib_1_4
+            elif 5 <= class_level <= 7:
+                return hours * ib_5_7
+            elif 8 <= class_level <= 10:
+                return hours * ib_8_10
+            elif 11 <= class_level <= 13:
+                return hours * ib_11_13
+        else:
+            if 1 <= class_level <= 4:
+                return hours * other_1_4
+            elif 5 <= class_level <= 10:
+                return hours * other_5_10
+            elif 11 <= class_level <= 12:
+                return hours * other_11_12
+
+    return 0
+
+# Step 3: Apply the function
+class_summary["Salary"] = class_summary.apply(calculate_salary, axis=1)
+
+# Step 4: Show results
+total_salary = class_summary["Salary"].sum()
+
+st.write("## Salary Summary")
+st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
+st.write(f"### Total Salary: **₹ {total_salary}**")
+
+
 # MAIN APP STARTS HERE
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
