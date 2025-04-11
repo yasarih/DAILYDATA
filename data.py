@@ -157,7 +157,7 @@ def main():
                 class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
                 total_salary = class_summary['Salary'].sum()
 
-                st.write("## Salary Summary")
+                st.write("## Salary Summary(Please dont use it, Updating Now)")
                 st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
                 st.success(f"### Total Salary: ₹ {total_salary:.2f}")
 
