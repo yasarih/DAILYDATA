@@ -190,7 +190,7 @@ def main():
             st.write(f"Total Hours: **{total_hours}**")
 
             st.markdown("### Input Your Rates:")
-           rates = {
+            rates = {
     'paid': st.number_input("Rate per Paid Class (default 100)", value=100),
     'demo_i_iv': st.number_input("Rate for Demo Class I - IV", value=120),
     'demo_v_x': st.number_input("Rate for Demo Class V - X", value=150),
