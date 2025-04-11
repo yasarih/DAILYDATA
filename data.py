@@ -111,7 +111,7 @@ def get_teacher_password(data, teacher_name):
 # MAIN APP STARTS HERE
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
-    st.title("The app is updating, so there might be some errors right now")
+    st.title("Teacher-Class Daily Logbook")
 
     if st.sidebar.button("Refresh Data"):
         st.session_state.data = get_merged_data_with_em()
