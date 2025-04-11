@@ -102,41 +102,53 @@ def get_teacher_password(data, teacher_name):
             return password_series.iloc[0]
     return None
 
-def calculate_salary(row, rates):
-    student_id = row['Student ID'].strip().lower()
-    syllabus = row['Syllabus'].strip().lower()
-    class_type = row['Type of class'].strip().lower()
-    hours = row['Hr']
+def calculate_salary(row):
+    name = str(row['Name']).strip().lower()  # ensure it's lowercase
+    hours = float(row['Hours'])  # ensure it's float
+    # Debug
+    # st.write(f"Processing: {name} | Hours: {hours}")
 
-    if 'demo class i - x' in student_id:
-        return hours * rates['demo_i_x']
-    elif 'demo class xi - xii' in student_id:
+    if teacher_name.lower() not in name:
+        return 0
+
+    student_info = str(row['Student ID']).lower()  # Assuming 'Student ID' contains class info
+
+    # Check which class and assign rate
+    if 'demo class i - iv' in student_info:
+        return hours * rates['demo_i_iv']
+    elif 'demo class v - x' in student_info:
+        return hours * rates['demo_v_x']
+    elif 'demo class xi - xii' in student_info:
         return hours * rates['demo_xi_xii']
-    elif class_type.startswith("paid"):
-        return hours * 4 * rates['paid']
+    elif 'class i - iv' in student_info:
+        return hours * rates['i_iv']
+    elif 'class v - x' in student_info:
+        return hours * rates['v_x']
+    elif 'class xi - xii' in student_info:
+        return hours * rates['xi_xii']
     else:
-        class_level = int(row['Class']) if row['Class'].isdigit() else None
-        if class_level is None:
-            return 0
+        return 0
 
-        if syllabus in ['igcse', 'ib']:
-            if 1 <= class_level <= 4:
-                return hours * rates['ib_1_4']
-            elif 5 <= class_level <= 7:
-                return hours * rates['ib_5_7']
-            elif 8 <= class_level <= 10:
-                return hours * rates['ib_8_10']
-            elif 11 <= class_level <= 13:
-                return hours * rates['ib_11_13']
-        else:
-            if 1 <= class_level <= 4:
-                return hours * rates['other_1_4']
-            elif 5 <= class_level <= 10:
-                return hours * rates['other_5_10']
-            elif 11 <= class_level <= 12:
-                return hours * rates['other_11_12']
+# When the user clicks the calculate button
+if st.button("Calculate Salary"):
+    if not teacher_name:
+        st.warning("Please enter the teacher's name.")
+    else:
+        # Apply salary calculation
+        df['Salary'] = df.apply(calculate_salary, axis=1)
 
-    return 0
+        # Filter only positive salary rows (relevant teacher)
+        filtered_df = df[df['Salary'] > 0]
+
+        # Sum the salary
+        total_salary = filtered_df['Salary'].sum()
+
+        # Display the result
+        st.success(f"The total salary for {teacher_name} is ₹{total_salary}")
+
+        # Optional: Show the detailed breakdown
+        st.subheader("Detailed Breakdown")
+        st.write(filtered_df[["Class", "Syllabus", "Type of class", 'Hours', 'Salary']])
 
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
