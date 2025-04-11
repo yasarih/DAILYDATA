@@ -136,7 +136,7 @@ def main():
                 password = get_teacher_password(filtered, teacher_name)
                 st.subheader(f"Welcome, {teacher_name}!")
                 if password:
-                    st.write(f"Your Supalearn Password is: **{password}**")
+                    st.write(f"Your Supalearn UserID is: **{password}**")
                 else:
                     st.write("Supalearn Password not found.")
 
