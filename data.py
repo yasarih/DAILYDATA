@@ -153,51 +153,62 @@ def main():
 
     if role == "Teacher":
         data = st.session_state.data
-        st.subheader("Teacher Login")
-        teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
-        teacher_name_part = st.text_input("Enter part of your name").strip().lower()
 
-        if st.button("Verify Teacher"):
-            filtered = data[(data['Teachers ID'].str.lower().str.strip() == teacher_id) &
-                            (data['Teachers Name'].str.lower().str.contains(teacher_name_part))]
-            if not filtered.empty:
-                teacher_name = filtered['Teachers Name'].iloc[0]
-                password = get_teacher_password(filtered, teacher_name)
-                st.subheader(f"Welcome, {teacher_name}!")
-                if password:
-                    st.write(f"Your Supalearn UserID is: **{password}**")
+        if "logged_in" not in st.session_state:
+            st.session_state.logged_in = False
+
+        if not st.session_state.logged_in:
+            st.subheader("Teacher Login")
+            teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+            teacher_name_part = st.text_input("Enter part of your name").strip().lower()
+
+            if st.button("Verify Teacher"):
+                filtered = data[(data['Teachers ID'].str.lower().str.strip() == teacher_id) &
+                                (data['Teachers Name'].str.lower().str.contains(teacher_name_part))]
+                if not filtered.empty:
+                    st.session_state.logged_in = True
+                    st.session_state.teacher_name = filtered['Teachers Name'].iloc[0]
+                    st.session_state.filtered_data = filtered
                 else:
-                    st.write("Supalearn Password not found.")
+                    st.error("Verification failed. Please check your Teacher ID and Name.")
 
-                class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
-                st.dataframe(class_summary)
+        if st.session_state.logged_in:
+            teacher_name = st.session_state.teacher_name
+            filtered = st.session_state.filtered_data
 
-                total_hours = class_summary['Hr'].sum()
-                st.write(f"Total Hours: **{total_hours}**")
-
-                st.markdown("### Input Your Rates:")
-                rates = {
-                    'paid': st.number_input("Rate per Paid Class (default 100)", value=100),
-                    'demo_i_x': st.number_input("Rate for Demo Class I - X", value=150),
-                    'demo_xi_xii': st.number_input("Rate for Demo Class XI - XII", value=180),
-                    'ib_1_4': st.number_input("Class 1-4 Rate (IB/IGCSE)", value=120),
-                    'ib_5_7': st.number_input("Class 5-7 Rate (IB/IGCSE)", value=150),
-                    'ib_8_10': st.number_input("Class 8-10 Rate (IB/IGCSE)", value=170),
-                    'ib_11_13': st.number_input("Class 11-13 Rate (IB/IGCSE)", value=200),
-                    'other_1_4': st.number_input("Class 1-4 Rate (Other)", value=120),
-                    'other_5_10': st.number_input("Class 5-10 Rate (Other)", value=150),
-                    'other_11_12': st.number_input("Class 11-12 Rate (Other)", value=180)
-                }
-
-                class_summary["Salary"] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
-                total_salary = class_summary["Salary"].sum()
-
-                st.write("## Salary Summary")
-                st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
-                st.write(f"### Total Salary: **₹ {total_salary}**")
-
+            st.subheader(f"Welcome, {teacher_name}!")
+            password = get_teacher_password(filtered, teacher_name)
+            if password:
+                st.write(f"Your Supalearn UserID is: **{password}**")
             else:
-                st.error("Verification failed. Please check your Teacher ID and Name.")
+                st.write("Supalearn Password not found.")
+
+            class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
+            st.dataframe(class_summary)
+
+            total_hours = class_summary['Hr'].sum()
+            st.write(f"Total Hours: **{total_hours}**")
+
+            st.markdown("### Input Your Rates:")
+            rates = {
+                'paid': st.number_input("Rate per Paid Class (default 100)", value=100),
+                'demo_i_x': st.number_input("Rate for Demo Class I - X", value=150),
+                'demo_xi_xii': st.number_input("Rate for Demo Class XI - XII", value=180),
+                'ib_1_4': st.number_input("Class 1-4 Rate (IB/IGCSE)", value=120),
+                'ib_5_7': st.number_input("Class 5-7 Rate (IB/IGCSE)", value=150),
+                'ib_8_10': st.number_input("Class 8-10 Rate (IB/IGCSE)", value=170),
+                'ib_11_13': st.number_input("Class 11-13 Rate (IB/IGCSE)", value=200),
+                'other_1_4': st.number_input("Class 1-4 Rate (Other)", value=120),
+                'other_5_10': st.number_input("Class 5-10 Rate (Other)", value=150),
+                'other_11_12': st.number_input("Class 11-12 Rate (Other)", value=180)
+            }
+
+            class_summary["Salary"] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
+            total_salary = class_summary["Salary"].sum()
+
+            st.write("## Salary Summary")
+            st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
+            st.write(f"### Total Salary: **₹ {total_salary}**")
 
     elif role == "Student":
         st.subheader("Student Login")
