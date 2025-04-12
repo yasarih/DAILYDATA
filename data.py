@@ -82,6 +82,8 @@ def get_teacher_password(data, teacher_name):
 def calculate_salary(row, rates):
     hours = float(row['Hr'])
     type_of_class = str(row['Type of class']).lower()
+    
+    # Corrected Salary calculation logic
     if 'demo class i - iv' in type_of_class:
         return hours * rates.get('demo_i_iv', 0)
     elif 'demo class v - x' in type_of_class:
@@ -99,7 +101,11 @@ def calculate_salary(row, rates):
 def highlight_duplicates(df):
     # Find duplicate rows based on 'Date' and 'Student ID'
     duplicates = df[df.duplicated(subset=["Date", "Student ID"], keep=False)]
-    return duplicates
+    
+    # Highlight duplicates in light red
+    df['highlight'] = np.where(df.duplicated(subset=["Date", "Student ID"], keep=False), 'background-color: lightcoral', '')
+    
+    return df
 
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
@@ -147,13 +153,11 @@ def main():
             class_summary["Date"] = pd.to_datetime(class_summary["Date"], format="%d/%m/%Y", errors='coerce')
             class_summary = class_summary.sort_values("Date")
 
-            st.dataframe(class_summary)
+            # Highlight duplicate entries based on 'Date' and 'Student ID'
+            class_summary = highlight_duplicates(class_summary)
 
-            # Highlight duplicates in the data
-            duplicates = highlight_duplicates(class_summary)
-            if not duplicates.empty:
-                st.markdown("### Duplicate Entries (Date and Student ID)")
-                st.write(duplicates)
+            # Display the class summary with highlighted duplicates
+            st.dataframe(class_summary.style.apply(lambda x: x, axis=1))
 
             total_hours = class_summary['Hr'].sum()
             st.write(f"Total Hours: **{total_hours}**")
