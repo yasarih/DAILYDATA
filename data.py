@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
+import time
 
 st.set_page_config(
     page_title="Angle Belearn Insights",
@@ -96,6 +97,11 @@ def calculate_salary(row, rates):
         return hours * rates.get('other_11_12', 0)
     return 0
 
+def highlight_duplicates(df):
+    # Find duplicate rows based on 'Date' and 'Student ID'
+    duplicates = df[df.duplicated(subset=["Date", "Student ID"], keep=False)]
+    return duplicates
+
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Teacher-Class Daily Logbook")
@@ -120,8 +126,8 @@ def main():
             teacher_name_part = st.text_input("Enter part of your name").strip().lower()
 
             if st.button("Verify Teacher"):
-                filtered = data[(data['Teachers ID'].str.lower().str.strip() == teacher_id) &
-                                (data['Teachers Name'].str.lower().str.contains(teacher_name_part))]
+                filtered = data[(data['Teachers ID'].str.lower().str.strip() == teacher_id) & 
+                                 (data['Teachers Name'].str.lower().str.contains(teacher_name_part))]
                 if not filtered.empty:
                     st.session_state.logged_in = True
                     st.session_state.teacher_name = filtered['Teachers Name'].iloc[0]
@@ -140,24 +146,34 @@ def main():
             class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
             st.dataframe(class_summary)
 
+            # Highlight duplicates in the data
+            duplicates = highlight_duplicates(class_summary)
+            if not duplicates.empty:
+                st.markdown("### Duplicate Entries (Date and Student ID)")
+                st.write(duplicates)
+
             total_hours = class_summary['Hr'].sum()
             st.write(f"Total Hours: **{total_hours}**")
 
             st.markdown("### Input Your Rates:")
-            rates = {
-                'demo_i_iv': st.number_input("Demo Class I - IV", value=120),
-                'demo_v_x': st.number_input("Demo Class V - X", value=150),
-                'demo_xi_xii': st.number_input("Demo Class XI - XII", value=180),
-                'other_1_4': st.number_input("Class I - IV (Other)", value=100),
-                'other_5_10': st.number_input("Class V - X (Other)", value=120),
-                'other_11_12': st.number_input("Class XI - XII (Other)", value=150)
+            # Dynamically show only the necessary rate input fields
+            available_rates = {
+                'demo_i_iv': 'Demo Class I - IV',
+                'demo_v_x': 'Demo Class V - X',
+                'demo_xi_xii': 'Demo Class XI - XII',
+                'other_1_4': 'Class I - IV (Other)',
+                'other_5_10': 'Class V - X (Other)',
+                'other_11_12': 'Class XI - XII (Other)',
             }
 
+            # Filter the necessary rates based on class types
+            selected_rates = {key: st.number_input(f"{value}", value=120 if "Demo" in value else 100) for key, value in available_rates.items()}
+
             if st.button("Calculate Salary"):
-                class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, rates), axis=1)
+                class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, selected_rates), axis=1)
                 total_salary = class_summary['Salary'].sum()
 
-                st.write("## Salary Summary(Please dont use it, Updating Now)")
+                st.write("## Salary Summary")
                 st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
                 st.success(f"### Total Salary: ₹ {total_salary:.2f}")
 
