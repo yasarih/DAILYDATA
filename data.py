@@ -3,7 +3,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
-import time
 
 st.set_page_config(
     page_title="Angle Belearn Insights",
@@ -143,7 +142,11 @@ def main():
             password = get_teacher_password(filtered, teacher_name)
             st.write(f"Your Supalearn UserID is: **{password}**" if password else "Supalearn Password not found.")
 
+            # Sort the class summary by Date
             class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
+            class_summary["Date"] = pd.to_datetime(class_summary["Date"], errors='coerce')
+            class_summary = class_summary.sort_values("Date")
+
             st.dataframe(class_summary)
 
             # Highlight duplicates in the data
@@ -169,12 +172,17 @@ def main():
             # Filter the necessary rates based on class types
             selected_rates = {key: st.number_input(f"{value}", value=120 if "Demo" in value else 100) for key, value in available_rates.items()}
 
+            # Salary calculation and grouping
             if st.button("Calculate Salary"):
                 class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, selected_rates), axis=1)
                 total_salary = class_summary['Salary'].sum()
 
-                st.write("## Salary Summary")
-                st.dataframe(class_summary[["Date", "Student", "Class", "Syllabus", "Type of class", "Hr", "Salary"]])
+                # Create a consolidated summary grouped by class, syllabus, and type of class
+                consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
+                    "Hr": "sum", "Salary": "sum"}).reset_index()
+
+                st.write("## Consolidated Salary Summary")
+                st.dataframe(consolidated_summary)
                 st.success(f"### Total Salary: ₹ {total_salary:.2f}")
 
     elif role == "Student":
