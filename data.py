@@ -151,7 +151,8 @@ def main():
 
             # Sort the class summary by Date (in dd/mm/yyyy format)
             class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
-            class_summary["Date"] = pd.to_datetime(class_summary["Date"], format="%d/%m/%Y", errors='coerce')
+            # Ensure that date format is parsed correctly
+            class_summary["Date"] = pd.to_datetime(class_summary["Date"], format="%d/%m/%Y", errors='coerce').dt.strftime('%d/%m/%Y')
             class_summary = class_summary.sort_values("Date")
 
             st.dataframe(highlight_duplicates(class_summary))
