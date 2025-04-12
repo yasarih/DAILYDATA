@@ -149,19 +149,16 @@ def main():
             password = get_teacher_password(filtered, teacher_name)
             st.write(f"Your Supalearn UserID is: **{password}**" if password else "Supalearn Password not found.")
 
-            # Sort the class summary by Date (in dd/mm/yyyy format)
+            # Avoid converting Date to datetime; keep it as it is from the Google Sheet
             class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
-            # Ensure that date format is parsed correctly
-            class_summary["Date"] = pd.to_datetime(class_summary["Date"], format="%d/%m/%Y", errors='coerce').dt.strftime('%d/%m/%Y')
-            class_summary = class_summary.sort_values("Date")
 
-            st.dataframe(highlight_duplicates(class_summary))
+            # Display Date exactly as it is in the Google Sheet (no date conversion)
+            st.dataframe(class_summary)
 
             total_hours = class_summary['Hr'].sum()
             st.write(f"Total Hours: **{total_hours}**")
 
             st.markdown("### Input Your Rates:")
-            # Dynamically show only the necessary rate input fields
             available_rates = {
                 'demo_i_iv': 'Demo Class I - IV',
                 'demo_v_x': 'Demo Class V - X',
@@ -171,15 +168,12 @@ def main():
                 'other_11_12': 'Class XI - XII (Other)',
             }
 
-            # Filter the necessary rates based on class types
             selected_rates = {key: st.number_input(f"{value}", value=120 if "Demo" in value else 100) for key, value in available_rates.items()}
 
-            # Salary calculation and grouping
             if st.button("Calculate Salary"):
                 class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, selected_rates), axis=1)
                 total_salary = class_summary['Salary'].sum()
 
-                # Create a consolidated summary grouped by class, syllabus, and type of class
                 consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
                     "Hr": "sum", "Salary": "sum"}).reset_index()
 
@@ -195,3 +189,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
