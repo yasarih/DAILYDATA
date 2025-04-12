@@ -102,10 +102,11 @@ def highlight_duplicates(df):
     # Find duplicate rows based on 'Date' and 'Student ID'
     duplicates = df[df.duplicated(subset=["Date", "Student ID"], keep=False)]
     
-    # Highlight duplicates in light red
-    df['highlight'] = np.where(df.duplicated(subset=["Date", "Student ID"], keep=False), 'background-color: lightcoral', '')
-    
-    return df
+    # Apply background-color: lightcoral to highlight duplicates
+    def apply_style(row):
+        return ['background-color: lightcoral' if row.name in duplicates.index else '' for _ in row]
+
+    return df.style.apply(apply_style, axis=1)
 
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
@@ -153,11 +154,7 @@ def main():
             class_summary["Date"] = pd.to_datetime(class_summary["Date"], format="%d/%m/%Y", errors='coerce')
             class_summary = class_summary.sort_values("Date")
 
-            # Highlight duplicate entries based on 'Date' and 'Student ID'
-            class_summary = highlight_duplicates(class_summary)
-
-            # Display the class summary with highlighted duplicates
-            st.dataframe(class_summary.style.apply(lambda x: x, axis=1))
+            st.dataframe(highlight_duplicates(class_summary))
 
             total_hours = class_summary['Hr'].sum()
             st.write(f"Total Hours: **{total_hours}**")
