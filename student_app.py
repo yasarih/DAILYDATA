@@ -5,7 +5,7 @@ import gspread
 import json
 
 # Constants for Google Sheets
-SPREADSHEET_ID = "1CtmcRqCRReVh0xp-QCkuVzlPr7KDdEquGNevKOA1e4w"  # Replace with your Google Sheets ID
+SPREADSHEET_ID = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"  # Replace with your Google Sheets ID
 WORKSHEET_NAME = "Student class details"  # Replace with your worksheet name
 
 # Set page layout and title
