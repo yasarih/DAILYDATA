@@ -79,42 +79,42 @@ def get_teacher_password(data, teacher_name):
             return password_series.iloc[0]
     return None
 
-def calculate_salary(row):
+def calculate_salary(row, selected_rates):
     student_id = row['Student ID'].strip().lower()
     syllabus = row['Syllabus'].strip().lower()
     class_type = row['Type of class'].strip().lower()
     hours = row['Hr']
 
     if 'demo class v - x' in student_id:
-        return hours * 150
+        return hours * selected_rates.get('demo_v_x', 150)
     elif 'demo class i - iv' in student_id:
-        return hours * 120
-    
+        return hours * selected_rates.get('demo_i_iv', 120)
     elif 'demo class xi - xii' in student_id:
-        return hours * 180
+        return hours * selected_rates.get('demo_xi_xii', 180)
     elif class_type.startswith("paid"):
         return hours * 4 * 100
     else:
-        class_level = int(row['Class']) if row['Class'].isdigit() else None
+        class_level = int(row['Class']) if str(row['Class']).isdigit() else None
         if syllabus in ['igcse', 'ib']:
             if class_level is not None:
                 if 1 <= class_level <= 4:
-                    return hours * 120
+                    return hours * selected_rates.get('other_1_4', 120)
                 elif 5 <= class_level <= 7:
-                    return hours * 150
+                    return hours * selected_rates.get('other_5_10', 150)
                 elif 8 <= class_level <= 10:
-                    return hours * 170
+                    return hours * selected_rates.get('other_5_10', 150)
                 elif 11 <= class_level <= 13:
-                    return hours * 200
+                    return hours * selected_rates.get('other_11_12', 180)
         else:
             if class_level is not None:
                 if 1 <= class_level <= 4:
-                    return hours * 120
+                    return hours * selected_rates.get('other_1_4', 120)
                 elif 5 <= class_level <= 10:
-                    return hours * 150
+                    return hours * selected_rates.get('other_5_10', 150)
                 elif 11 <= class_level <= 12:
-                    return hours * 180
+                    return hours * selected_rates.get('other_11_12', 180)
     return 0
+
 
 
 def highlight_duplicates(df):
