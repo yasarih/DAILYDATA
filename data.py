@@ -79,24 +79,43 @@ def get_teacher_password(data, teacher_name):
             return password_series.iloc[0]
     return None
 
-def calculate_salary(row, rates):
-    hours = float(row['Hr'])
-    type_of_class = str(row['Type of class']).lower()
+def calculate_salary(row):
+    student_id = row['Student ID'].strip().lower()
+    syllabus = row['Syllabus'].strip().lower()
+    class_type = row['Type of class'].strip().lower()
+    hours = row['Hr']
+
+    if 'demo class v - x' in student_id:
+        return hours * 150
+    elif 'demo class i - iv' in student_id:
+        return hours * 120
     
-    # Corrected Salary calculation logic
-    if 'demo class i - iv' in type_of_class:
-        return hours * rates.get('demo_i_iv', 0)
-    elif 'demo class v - x' in type_of_class:
-        return hours * rates.get('demo_v_x', 0)
-    elif 'demo class xi - xii' in type_of_class:
-        return hours * rates.get('demo_xi_xii', 0)
-    elif 'class i - iv' in type_of_class:
-        return hours * rates.get('other_1_4', 0)
-    elif 'class v - x' in type_of_class:
-        return hours * rates.get('other_5_10', 0)
-    elif 'class xi - xii' in type_of_class:
-        return hours * rates.get('other_11_12', 0)
+    elif 'demo class xi - xii' in student_id:
+        return hours * 180
+    elif class_type.startswith("paid"):
+        return hours * 4 * 100
+    else:
+        class_level = int(row['Class']) if row['Class'].isdigit() else None
+        if syllabus in ['igcse', 'ib']:
+            if class_level is not None:
+                if 1 <= class_level <= 4:
+                    return hours * 120
+                elif 5 <= class_level <= 7:
+                    return hours * 150
+                elif 8 <= class_level <= 10:
+                    return hours * 170
+                elif 11 <= class_level <= 13:
+                    return hours * 200
+        else:
+            if class_level is not None:
+                if 1 <= class_level <= 4:
+                    return hours * 120
+                elif 5 <= class_level <= 10:
+                    return hours * 150
+                elif 11 <= class_level <= 12:
+                    return hours * 180
     return 0
+
 
 def highlight_duplicates(df):
     # Find duplicate rows based on 'Date' and 'Student ID'
