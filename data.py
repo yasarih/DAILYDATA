@@ -69,7 +69,7 @@ def get_merged_data_with_em():
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
-    return merged_data.drop_duplicates()
+    return merged_data
 
 def get_teacher_password(data, teacher_name):
     teacher_data = data[data['Teachers Name'].str.lower() == teacher_name.lower()]
@@ -146,16 +146,29 @@ def main():
             st.session_state.logged_in = False
 
         if not st.session_state.logged_in:
+            month_data= data['MM'].tolist()
             st.subheader("Teacher Login")
             teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
             teacher_name_part = st.text_input("Enter part of your name").strip().lower()
+            Monthpick = st.selectbox("Pick Month",month_data)
 
             if st.button("Verify Teacher"):
-                filtered = data[(data['Teachers ID'].str.lower().str.strip() == teacher_id) & 
-                                 (data['Teachers Name'].str.lower().str.contains(teacher_name_part))]
+                # Normalize columns
+                data['Teachers ID'] = data['Teachers ID'].str.strip().str.lower()
+                data['Teachers Name'] = data['Teachers Name'].str.strip().str.lower()
+
+                # Apply filters
+                filtered = data[
+                    (data['Teachers ID'] == teacher_id) & 
+                    (data['Teachers Name'].str.contains(teacher_name_part, na=False))&
+                    (data["MM"]==Monthpick)
+                ]
+
+                st.write(f"Filtered rows: {len(filtered)}")  # Debug line
+
                 if not filtered.empty:
                     st.session_state.logged_in = True
-                    st.session_state.teacher_name = filtered['Teachers Name'].iloc[0]
+                    st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title()
                     st.session_state.filtered_data = filtered
                 else:
                     st.error("Verification failed. Please check your Teacher ID and Name.")
@@ -168,11 +181,10 @@ def main():
             password = get_teacher_password(filtered, teacher_name)
             st.write(f"Your Supalearn UserID is: **{password}**" if password else "Supalearn Password not found.")
 
-            # Avoid converting Date to datetime; keep it as it is from the Google Sheet
-            class_summary = filtered.groupby(["Date", "Student ID", "Student", "Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
+            class_summary = filtered[["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]]
+            class_summary = class_summary.sort_values(by=["Date", "Student ID"], ascending=[True, True]).reset_index(drop=True)
 
-            # Display Date exactly as it is in the Google Sheet (no date conversion)
-            st.dataframe(class_summary)
+            st.dataframe(highlight_duplicates(class_summary))
 
             total_hours = class_summary['Hr'].sum()
             st.write(f"Total Hours: **{total_hours}**")
@@ -187,14 +199,18 @@ def main():
                 'other_11_12': 'Class XI - XII (Other)',
             }
 
-            selected_rates = {key: st.number_input(f"{value}", value=120 if "Demo" in value else 100) for key, value in available_rates.items()}
+            selected_rates = {
+                key: st.number_input(f"{value}", value=120 if "Demo" in value else 100)
+                for key, value in available_rates.items()
+            }
 
             if st.button("Calculate Salary"):
                 class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, selected_rates), axis=1)
                 total_salary = class_summary['Salary'].sum()
 
                 consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
-                    "Hr": "sum", "Salary": "sum"}).reset_index()
+                    "Hr": "sum", "Salary": "sum"
+                }).reset_index()
 
                 st.write("## Consolidated Salary Summary")
                 st.dataframe(consolidated_summary)
@@ -205,9 +221,7 @@ def main():
         st.info("(Student interface coming soon...)")
     else:
         st.info("Please select a role from the sidebar.")
-
 if __name__ == "__main__":
     main()
-
 
 
