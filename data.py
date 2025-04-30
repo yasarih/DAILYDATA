@@ -158,7 +158,7 @@ def main():
             st.write("## Consolidated Class Summary")
             st.dataframe(consolidated_summary)
             # Show unique students with EM
-            st.write("## Unique Students and EM")
+            st.write("## Students and EM")
 
             unique_students = st.session_state.data[
             (st.session_state.data['Teachers Name'].str.lower() == teacher_name.lower()) 
