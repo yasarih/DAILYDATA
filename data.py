@@ -79,43 +79,6 @@ def get_teacher_password(data, teacher_name):
             return password_series.iloc[0]
     return None
 
-def calculate_salary(row, selected_rates):
-    student_id = row['Student ID'].strip().lower()
-    syllabus = row['Syllabus'].strip().lower()
-    class_type = row['Type of class'].strip().lower()
-    hours = row['Hr']
-
-    if 'demo class v - x' in student_id:
-        return hours * selected_rates.get('demo_v_x', 150)
-    elif 'demo class i - iv' in student_id:
-        return hours * selected_rates.get('demo_i_iv', 120)
-    elif 'demo class xi - xii' in student_id:
-        return hours * selected_rates.get('demo_xi_xii', 180)
-    elif class_type.startswith("paid"):
-        return hours * 4 * 100
-    else:
-        class_level = int(row['Class']) if str(row['Class']).isdigit() else None
-        if syllabus in ['igcse', 'ib']:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * selected_rates.get('other_1_4', 120)
-                elif 5 <= class_level <= 7:
-                    return hours * selected_rates.get('other_5_10', 150)
-                elif 8 <= class_level <= 10:
-                    return hours * selected_rates.get('other_5_10', 150)
-                elif 11 <= class_level <= 13:
-                    return hours * selected_rates.get('other_11_12', 180)
-        else:
-            if class_level is not None:
-                if 1 <= class_level <= 4:
-                    return hours * selected_rates.get('other_1_4', 120)
-                elif 5 <= class_level <= 10:
-                    return hours * selected_rates.get('other_5_10', 150)
-                elif 11 <= class_level <= 12:
-                    return hours * selected_rates.get('other_11_12', 180)
-    return 0
-
-
 
 def highlight_duplicates(df):
     # Find duplicate rows based on 'Date' and 'Student ID'
@@ -186,35 +149,24 @@ def main():
 
             st.dataframe(highlight_duplicates(class_summary))
 
-            total_hours = class_summary['Hr'].sum()
-            st.write(f"Total Hours: **{total_hours}**")
+           
 
-            st.markdown("### Input Your Rates:")
-            available_rates = {
-                'demo_i_iv': 'Demo Class I - IV',
-                'demo_v_x': 'Demo Class V - X',
-                'demo_xi_xii': 'Demo Class XI - XII',
-                'other_1_4': 'Class I - IV (Other)',
-                'other_5_10': 'Class V - X (Other)',
-                'other_11_12': 'Class XI - XII (Other)',
-            }
-
-            selected_rates = {
-                key: st.number_input(f"{value}", value=120 if "Demo" in value else 100)
-                for key, value in available_rates.items()
-            }
-
-            if st.button("Calculate Salary"):
-                class_summary['Salary'] = class_summary.apply(lambda row: calculate_salary(row, selected_rates), axis=1)
-                total_salary = class_summary['Salary'].sum()
-
-                consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
-                    "Hr": "sum", "Salary": "sum"
+            consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
+                    "Hr": "sum"
                 }).reset_index()
 
-                st.write("## Consolidated Salary Summary")
-                st.dataframe(consolidated_summary)
-                st.success(f"### Total Salary: ₹ {total_salary:.2f}")
+            st.write("## Consolidated Class Summary")
+            st.dataframe(consolidated_summary)
+            # Show unique students with EM
+            st.write("## Unique Students and EM")
+
+            unique_students = st.session_state.data[
+            (st.session_state.data['Teachers Name'].str.lower() == teacher_name.lower()) 
+            ][['Student ID', 'Student', 'EM','Phone Number']].drop_duplicates().sort_values(by='Student')
+
+            st.dataframe(unique_students)
+
+            
 
     elif role == "Student":
         st.subheader("Student Login")
