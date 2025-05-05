@@ -109,7 +109,8 @@ def main():
             st.session_state.logged_in = False
 
         if not st.session_state.logged_in:
-            month_data= data['MM'].tolist()
+            month_data = sorted(data['MM'].dropna().unique())
+
             st.subheader("Teacher Login")
             teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
             teacher_name_part = st.text_input("Enter part of your name").strip().lower()
