@@ -36,7 +36,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
         return sheet
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
-        return None
+    return None
 
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
@@ -72,8 +72,6 @@ def get_merged_data_with_em():
     return merged_data
 
 def get_teacher_password(data, teacher_name):
-    if 'Teachers Name' not in data.columns:
-        return None
     teacher_data = data[data['Teachers Name'].str.lower() == teacher_name.lower()]
     if 'Supalearn Password' in teacher_data.columns:
         password_series = teacher_data['Supalearn Password'].dropna()
@@ -91,12 +89,22 @@ def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Teacher-Class Daily Logbook")
 
-    if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
-        st.success("Data refreshed!")
-
+    # Initialize session state
     if "data" not in st.session_state:
-        st.session_state.data = get_merged_data_with_em()
+        st.session_state.data = None
+    if "last_updated" not in st.session_state:
+        st.session_state.last_updated = None
+
+    # Refresh button
+    if st.sidebar.button("Refresh Data") or st.session_state.data is None:
+        with st.spinner("Loading data..."):
+            st.session_state.data = get_merged_data_with_em()
+            st.session_state.last_updated = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.success("Data refreshed!")
+
+    # Show last updated time
+    if st.session_state.last_updated:
+        st.sidebar.markdown(f"**Last refreshed:** {st.session_state.last_updated}")
 
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
@@ -113,20 +121,18 @@ def main():
 
             if st.button("Verify Teacher"):
                 data = st.session_state.data
-
                 required_cols = ['Teachers ID', 'Password', 'MM']
-                missing = [col for col in required_cols if col not in data.columns]
-                if missing:
-                    st.error(f"Missing required columns: {', '.join(missing)}")
+                if not all(col in data.columns for col in required_cols):
+                    st.error(f"Missing required columns: {', '.join(set(required_cols) - set(data.columns))}")
                     st.stop()
 
                 filtered = data[
-                    (data['Teachers ID'].str.lower() == teacher_id) &
+                    (data['Teachers ID'] == teacher_id) &
                     (data['Password'] == teacher_pass) &
                     (data['MM'] == month_str)
                 ].copy()
 
-                st.write(f"Filtered rows: {len(filtered)}")  # Debug
+                st.write(f"Filtered rows: {len(filtered)}")  # Debug info
 
                 if not filtered.empty:
                     st.session_state.logged_in = True
@@ -157,9 +163,8 @@ def main():
 
             st.write("## Students and EM")
             unique_students = st.session_state.data[
-                st.session_state.data['Teachers Name'].str.lower() == teacher_name.lower()
+                (st.session_state.data['Teachers Name'].str.lower() == teacher_name.lower())
             ][['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates().sort_values(by='Student')
-
             st.dataframe(unique_students)
 
     elif role == "Student":
