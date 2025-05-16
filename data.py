@@ -62,32 +62,37 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 def get_merged_data_with_em():
     main_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student class details")
     em_data = fetch_data_from_sheet("1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4", "Student Data")
-
+    
     if main_data.empty or em_data.empty:
         return pd.DataFrame()
 
     main_data = main_data.rename(columns={'Student id': 'Student ID'})
     em_data = em_data.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
     merged_data = main_data.merge(em_data[['Student ID', 'EM', 'Phone Number']], on="Student ID", how="left")
+
+    # Normalize once
+    for col in ['Teachers ID', 'Teachers Name', 'MM']:
+        if col in merged_data.columns:
+            merged_data[col] = merged_data[col].str.strip().str.lower()
+
     return merged_data
 
+@st.cache_data(ttl=3600)
+def get_cached_data():
+    return get_merged_data_with_em()
+
 def get_teacher_password(data, teacher_name):
-    teacher_data = data[data['Teachers Name'].str.lower() == teacher_name.lower()]
+    teacher_data = data[data['Teachers Name'] == teacher_name.lower()]
     if 'Supalearn Password' in teacher_data.columns:
         password_series = teacher_data['Supalearn Password'].dropna()
         if not password_series.empty:
             return password_series.iloc[0]
     return None
 
-
 def highlight_duplicates(df):
-    # Find duplicate rows based on 'Date' and 'Student ID'
-    duplicates = df[df.duplicated(subset=["Date", "Student ID"], keep=False)]
-    
-    # Apply background-color: lightcoral to highlight duplicates
+    duplicates = df[df.duplicated(subset=["Date", "Student ID", "Type of class"], keep=False)]
     def apply_style(row):
         return ['background-color: lightcoral' if row.name in duplicates.index else '' for _ in row]
-
     return df.style.apply(apply_style, axis=1)
 
 def main():
@@ -95,47 +100,42 @@ def main():
     st.title("Teacher-Class Daily Logbook")
 
     if st.sidebar.button("Refresh Data"):
-        st.session_state.data = get_merged_data_with_em()
+        st.cache_data.clear()
+        st.session_state.data = get_cached_data()
         st.success("Data refreshed!")
 
     if "data" not in st.session_state:
-        st.session_state.data = get_merged_data_with_em()
+        st.session_state.data = get_cached_data()
 
+    data = st.session_state.data
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
     if role == "Teacher":
-        data = st.session_state.data
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
 
         if not st.session_state.logged_in:
-            month_data = sorted(data['MM'].dropna().unique())
-
             st.subheader("Teacher Login")
             teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
-            teacher_name_part = st.text_input("Enter part of your name").strip().lower()
-            Monthpick = st.selectbox("Pick Month",month_data)
+            teacher_pass = st.text_input("Enter last 4 digits of your phone number")
+            month = st.selectbox("Pick Month (1–12)", list(range(1, 13)))
+            month_str = f"{month:02}"
 
             if st.button("Verify Teacher"):
-                # Normalize columns
-                data['Teachers ID'] = data['Teachers ID'].str.strip().str.lower()
-                data['Teachers Name'] = data['Teachers Name'].str.strip().str.lower()
-
-                # Apply filters
                 filtered = data[
-                    (data['Teachers ID'] == teacher_id) & 
-                    (data['Teachers Name'].str.contains(teacher_name_part, na=False))&
-                    (data["MM"]==Monthpick)
+                    (data['Teachers ID'] == teacher_id) &
+                    (data['Password'] == teacher_pass) &
+                    (data['MM'] == month_str)
                 ]
-
-                st.write(f"Filtered rows: {len(filtered)}")  # Debug line
+                st.write(f"Filtered rows: {len(filtered)}")  # Debug
 
                 if not filtered.empty:
                     st.session_state.logged_in = True
                     st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title()
                     st.session_state.filtered_data = filtered
                 else:
-                    st.error("Verification failed. Please check your Teacher ID and Name.")
+                    st.error("Verification failed. Please double-check your Teacher ID and phone digits."
+                             " Contact Nihala (8089381416) if needed.")
 
         if st.session_state.logged_in:
             teacher_name = st.session_state.teacher_name
@@ -146,35 +146,27 @@ def main():
             st.write(f"Your Supalearn UserID is: **{password}**" if password else "Supalearn Password not found.")
 
             class_summary = filtered[["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]]
-            class_summary = class_summary.sort_values(by=["Date", "Student ID"], ascending=[True, True]).reset_index(drop=True)
+            class_summary = class_summary.sort_values(by=["Date", "Student ID"]).reset_index(drop=True)
 
             st.dataframe(highlight_duplicates(class_summary))
 
-           
-
-            consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
-                    "Hr": "sum"
-                }).reset_index()
-
             st.write("## Consolidated Class Summary")
+            consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
+                "Hr": "sum"
+            }).reset_index()
             st.dataframe(consolidated_summary)
-            # Show unique students with EM
-            st.write("## Students and EM")
 
-            unique_students = st.session_state.data[
-            (st.session_state.data['Teachers Name'].str.lower() == teacher_name.lower()) 
-            ][['Student ID', 'Student', 'EM','Phone Number']].drop_duplicates().sort_values(by='Student')
-
+            st.write("## Unique Students and EM")
+            unique_students = data[
+                (data['Teachers Name'] == teacher_name.lower())
+            ][['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates().sort_values(by='Student')
             st.dataframe(unique_students)
-
-            
 
     elif role == "Student":
         st.subheader("Student Login")
         st.info("(Student interface coming soon...)")
     else:
         st.info("Please select a role from the sidebar.")
+
 if __name__ == "__main__":
     main()
-
-
