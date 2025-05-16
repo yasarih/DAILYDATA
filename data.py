@@ -118,7 +118,7 @@ def main():
             st.subheader("Teacher Login")
             teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
             teacher_pass = st.text_input("Enter last 4 digits of your phone number")
-            month = st.selectbox("Pick Month (1–12)", list(range(1, 13)))
+            month = st.selectbox("Pick Month ", list(range(4, 13)))
             month_str = f"{month:02}"
 
             if st.button("Verify Teacher"):
