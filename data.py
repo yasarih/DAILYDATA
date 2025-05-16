@@ -85,6 +85,9 @@ def highlight_duplicates(df):
         return ['background-color: lightcoral' if row.name in duplicates.index else '' for _ in row]
     return df.style.apply(apply_style, axis=1)
 
+def to_csv_download(df, filename="teacher_log.csv"):
+    return df.to_csv(index=False).encode("utf-8")
+
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Teacher-Class Daily Logbook")
@@ -153,6 +156,15 @@ def main():
             class_summary = class_summary.sort_values(by=["Date", "Student ID"]).reset_index(drop=True)
 
             st.dataframe(highlight_duplicates(class_summary))
+
+            # CSV Download button
+            csv_data = to_csv_download(class_summary)
+            st.download_button(
+                label="📥 Download Class Summary as CSV",
+                data=csv_data,
+                file_name=f"{teacher_name.replace(' ', '_')}_class_summary.csv",
+                mime="text/csv"
+            )
 
             consolidated_summary = class_summary.groupby(["Class", "Syllabus", "Type of class"]).agg({
                 "Hr": "sum"
