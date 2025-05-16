@@ -124,25 +124,39 @@ def main():
 
             if st.button("Verify Teacher"):
                 data = st.session_state.data
+
                 required_cols = ['Teachers ID', 'Password', 'MM']
                 if not all(col in data.columns for col in required_cols):
                     st.error(f"Missing required columns: {', '.join(set(required_cols) - set(data.columns))}")
                     st.stop()
 
+    # Clean the columns
+                data['Teachers ID'] = data['Teachers ID'].str.strip().str.lower()
+                data['Password'] = data['Password'].astype(str).str.strip()
+                data['MM'] = data['MM'].astype(str).str.zfill(2)
+
+                st.write("Teacher ID input:", teacher_id)
+                st.write("Password input:", teacher_pass)
+                st.write("Month input:", month_str)
+
+    # Debug: check what values exist
+                
+
+    # Apply filter
                 filtered = data[
                     (data['Teachers ID'] == teacher_id) &
                     (data['Password'] == teacher_pass) &
                     (data['MM'] == month_str)
-                ].copy()
+                        ].copy()
 
-                st.write(f"Filtered rows: {len(filtered)}")  # Debug info
+                st.write(f"Filtered rows: {len(filtered)}")
 
                 if not filtered.empty:
-                    st.session_state.logged_in = True
-                    st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title()
-                    st.session_state.filtered_data = filtered
+                        st.session_state.logged_in = True
+                        st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title()
+                        st.session_state.filtered_data = filtered
                 else:
-                    st.error("Verification failed. Please double-check your Teacher ID and phone digits. Contact Nihala (8089381416) if needed.")
+                        st.error("Verification failed. Please double-check your Teacher ID and phone digits. Contact Nihala (8089381416) if needed.")
 
         if st.session_state.logged_in:
             teacher_name = st.session_state.teacher_name
