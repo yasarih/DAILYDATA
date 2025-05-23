@@ -4,23 +4,18 @@ from google.oauth2.service_account import Credentials
 import gspread
 import json
 
-# Constants for Google Sheets
+# Constants
 SPREADSHEET_ID = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
 WORKSHEET_NAME = "Student class details"
 
-# Set page layout and title
+# Page config
 st.set_page_config(
     page_title="Student Insights App",
     page_icon="🎓",
     layout="wide",
-    menu_items={
-        "Get Help": None,
-        "Report a bug": None,
-        "About": None,
-    },
 )
 
-# Load credentials from secrets
+# Load credentials
 def load_credentials_from_secrets():
     try:
         credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
@@ -49,7 +44,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     except gspread.exceptions.SpreadsheetNotFound:
         st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found.")
     except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet.")
+        st.error(f"Worksheet '{worksheet_name}' not found.")
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
     return None
@@ -99,7 +94,7 @@ def load_data(spreadsheet_id, sheet_name):
     data["date"] = pd.to_datetime(data["date"], errors="coerce")
     return data
 
-# Main app logic
+# Main app
 def main():
     st.title("Student Insights and Analysis")
 
@@ -110,11 +105,9 @@ def main():
         st.error(str(e))
         return
 
-    # Inputs
     student_id = st.text_input("Enter Your Student ID").strip().lower()
     student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
     month = st.selectbox("Pick Month", list(range(4, 13)))
-    month_str = f"{month:02}"
 
     if st.button("Fetch Data"):
         if not student_id or len(student_name_part) < 4:
@@ -135,13 +128,12 @@ def main():
             filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")
             filtered_data.dropna(subset=["date"], inplace=True)
             filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
+
             final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
 
-            # Monthly class details
             st.write("**Your Monthly Class Details**")
             st.dataframe(final_data)
 
-            # Subject-wise breakdown
             subject_hours = (
                 filtered_data.groupby("subject")["hr"]
                 .sum()
@@ -151,11 +143,9 @@ def main():
             st.subheader("Subject-wise Hour Breakdown")
             st.dataframe(subject_hours)
 
-            # Total hours
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
 
-            # Weekly breakdown
             filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week
             weekly_hours = (
                 filtered_data.groupby("week")["hr"]
@@ -165,11 +155,12 @@ def main():
             )
             st.subheader("Weekly Hour Breakdown")
             st.dataframe(weekly_hours)
+
         else:
             st.error(
                 f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')})."
             )
 
-# Run app
+# Run the app
 if __name__ == "__main__":
     main()
