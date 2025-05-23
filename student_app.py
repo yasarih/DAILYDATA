@@ -20,7 +20,7 @@ st.set_page_config(
     },
 )
 
-# Function to load credentials from local JSON file
+# Load credentials from secrets
 def load_credentials_from_secrets():
     try:
         credentials_info = json.loads(st.secrets["google_credentials_new_project"]["data"])
@@ -29,10 +29,9 @@ def load_credentials_from_secrets():
         st.error("Google credentials not found in Streamlit secrets.")
         return None
 
-
-# Function to connect to Google Sheets
+# Connect to Google Sheets
 def connect_to_google_sheets(spreadsheet_id, worksheet_name):
-    credentials_info = load_credentials_from_secrets()  # Fixed here
+    credentials_info = load_credentials_from_secrets()
     if not credentials_info:
         return None
 
@@ -43,27 +42,24 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
     ]
 
     try:
-        credentials = Credentials.from_service_account_info(
-            credentials_info,
-            scopes=scopes,
-        )
+        credentials = Credentials.from_service_account_info(credentials_info, scopes=scopes)
         client = gspread.authorize(credentials)
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
     except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found. Check the spreadsheet ID and permissions.")
+        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found.")
     except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet. Verify the worksheet name.")
+        st.error(f"Worksheet '{worksheet_name}' not found in the spreadsheet.")
     except Exception as e:
-        st.error(f"Unexpected error connecting to Google Sheets: {e}")
+        st.error(f"Error connecting to Google Sheets: {e}")
     return None
 
-# Function to fetch data from Google Sheets
+# Fetch data
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
         return pd.DataFrame()
-    
+
     try:
         data = sheet.get_all_values()
         if data:
@@ -82,15 +78,12 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
         st.error(f"Error fetching data from worksheet: {e}")
         return pd.DataFrame()
 
-# Function to load and preprocess data
+# Load and preprocess data
 @st.cache_data
 def load_data(spreadsheet_id, sheet_name):
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
-
-    # Normalize column names
     data.columns = data.columns.str.strip().str.lower()
 
-    # Validate required columns
     required_columns = [
         "date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
@@ -99,20 +92,14 @@ def load_data(spreadsheet_id, sheet_name):
     if missing_columns:
         raise ValueError(f"Missing columns in data: {missing_columns}")
 
-    # Filter required columns
     data = data[required_columns]
-
-    # Normalize relevant columns for matching
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
-
-    # Convert 'Date' to datetime format
-    data["date"] = pd.to_datetime(data["date"], errors="coerce")  # Coerce invalid dates to NaT
-
+    data["date"] = pd.to_datetime(data["date"], errors="coerce")
     return data
 
-# Main application
+# Main app logic
 def main():
     st.title("Student Insights and Analysis")
 
@@ -127,65 +114,65 @@ def main():
     student_id = st.text_input("Enter Your Student ID").strip().lower()
     student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
 
-    # Month dropdown
-    # Month dropdown: Only allow months 4 to 12
+    # Month selection (April to December)
     month = st.selectbox("Pick Month", list(range(4, 13)))
-    month_str = f"{month:02}"  # Format as 'MM' string  
-    )
+    month_str = f"{month:02}"  # zero-padded MM format
 
     if st.button("Fetch Data"):
         if not student_id or len(student_name_part) < 4:
             st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
-        # Filter data based on student ID, partial name match, and month
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.strftime('%m') == month_str)  # Use zero-padded month
+            (student_data["date"].dt.strftime('%m') == month_str)
         ]
 
         if not filtered_data.empty:
-            student_name = filtered_data["student"].iloc[0].title()  # Display name in title case
+            student_name = filtered_data["student"].iloc[0].title()
             st.subheader(f"Welcome, {student_name}!")
 
-    # Format 'Date' as DD/MM/YYYY for display purposes
-            filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")  # Coerce invalid dates to NaT
-            filtered_data.dropna(subset=["date"], inplace=True)  # Drop rows with invalid dates
-            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')  # Format dates for display
+            # Clean and format data
+            filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")
+            filtered_data.dropna(subset=["date"], inplace=True)
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
-    # Remove "student id" and "student" columns before displaying
-            final_data = filtered_data.drop(columns=["student id", "student"])
-            final_data = final_data.reset_index(drop=True)
+            final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
 
-    # Display subject breakdown
+            # Display monthly class details
+            st.write("**Your Monthly Class Details**")
+            st.dataframe(final_data)
+
+            # Subject-wise breakdown
             subject_hours = (
                 filtered_data.groupby("subject")["hr"]
                 .sum()
                 .reset_index()
                 .rename(columns={"hr": "Total Hours"})
             )
-        
-            st.write("**Your Monthly Class Details**")
-            st.dataframe(final_data)  # Display final data without hidden columns
             st.subheader("Subject-wise Hour Breakdown")
             st.dataframe(subject_hours)
-        
-            # Total hours calculation and display
+
+            # Total hours
             total_hours = filtered_data["hr"].sum()
             st.write(f"**Total Hours:** {total_hours:.2f}")
-            # Additional output: Weekly breakdown
-            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week  # Use cleaned dates
+
+            # Weekly breakdown
+            filtered_data["week"] = pd.to_datetime(filtered_data["date"], errors="coerce").dt.isocalendar().week
             weekly_hours = (
-            filtered_data.groupby("week")["hr"].sum().reset_index().rename(columns={"hr": "Weekly Total Hours"}))
+                filtered_data.groupby("week")["hr"]
+                .sum()
+                .reset_index()
+                .rename(columns={"hr": "Weekly Total Hours"})
+            )
             st.subheader("Weekly Hour Breakdown")
             st.dataframe(weekly_hours)
-            
-        
         else:
-            st.error(f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')}).")
-        
+            st.error(
+                f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')})."
+            )
 
-# Run the app
+# Run app
 if __name__ == "__main__":
     main()
