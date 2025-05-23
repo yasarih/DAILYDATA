@@ -128,10 +128,9 @@ def main():
     student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
 
     # Month dropdown
-    month = st.selectbox(
-        "Select Month",
-        options=list(range(1, 13)),
-        format_func=lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B'),  # Show month names
+    # Month dropdown: Only allow months 4 to 12
+    month = st.selectbox("Pick Month", list(range(4, 13)))
+    month_str = f"{month:02}"  # Format as 'MM' string  
     )
 
     if st.button("Fetch Data"):
@@ -143,7 +142,7 @@ def main():
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["date"].dt.month == month)  # Filter by selected month
+            (student_data["date"].dt.strftime('%m') == month_str)  # Use zero-padded month
         ]
 
         if not filtered_data.empty:
