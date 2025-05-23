@@ -5,8 +5,8 @@ import gspread
 import json
 
 # Constants for Google Sheets
-SPREADSHEET_ID = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"  # Replace with your Google Sheets ID
-WORKSHEET_NAME = "Student class details"  # Replace with your worksheet name
+SPREADSHEET_ID = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
+WORKSHEET_NAME = "Student class details"
 
 # Set page layout and title
 st.set_page_config(
@@ -110,13 +110,11 @@ def main():
         st.error(str(e))
         return
 
-    # Inputs for verification
+    # Inputs
     student_id = st.text_input("Enter Your Student ID").strip().lower()
     student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
-
-    # Month selection (April to December)
     month = st.selectbox("Pick Month", list(range(4, 13)))
-    month_str = f"{month:02}"  # zero-padded MM format
+    month_str = f"{month:02}"
 
     if st.button("Fetch Data"):
         if not student_id or len(student_name_part) < 4:
@@ -126,7 +124,7 @@ def main():
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["MM"] == month)
+            (student_data["date"].dt.month == month)
         ]
 
         if not filtered_data.empty:
@@ -137,10 +135,9 @@ def main():
             filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")
             filtered_data.dropna(subset=["date"], inplace=True)
             filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
-
             final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
 
-            # Display monthly class details
+            # Monthly class details
             st.write("**Your Monthly Class Details**")
             st.dataframe(final_data)
 
