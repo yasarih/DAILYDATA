@@ -84,7 +84,7 @@ def load_data(spreadsheet_id, sheet_name):
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
     data.columns = data.columns.str.strip().str.lower()
 
-    required_columns = ["MM",
+    required_columns = [
         "date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
     ]
