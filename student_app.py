@@ -76,12 +76,10 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 
 # Load and preprocess data
 @st.cache_data
+@st.cache_data
 def load_data(spreadsheet_id, sheet_name):
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
     data.columns = data.columns.str.strip().str.lower()
-
-    # Uncomment this to debug columns
-    # st.write("Loaded columns:", data.columns.tolist())
 
     required_columns = [
         "mm", "date", "subject", "hr", "teachers name",
@@ -92,12 +90,17 @@ def load_data(spreadsheet_id, sheet_name):
         raise ValueError(f"Missing columns in data: {missing_columns}")
 
     data = data[required_columns]
+    
+    # 🛠️ Fix MM format here
+    data["mm"] = pd.to_numeric(data["mm"], errors="coerce").fillna(0).astype(int)
+    
     data["student id"] = data["student id"].astype(str).str.lower().str.strip()
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
     data["date"] = pd.to_datetime(data["date"], errors="coerce")
-    data["mm"] = pd.to_numeric(data["mm"], errors="coerce").fillna(0).astype(int)
+
     return data
+
 
 # Main app
 def main():
