@@ -9,7 +9,11 @@ SPREADSHEET_ID = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
 WORKSHEET_NAME = "Student class details"
 
 # Page config
-st.set_page_config(page_title="Student Insights App", page_icon="🎓", layout="wide")
+st.set_page_config(
+    page_title="Student Insights App",
+    page_icon="🎓",
+    layout="wide",
+)
 
 # Load credentials
 def load_credentials_from_secrets():
@@ -37,100 +41,152 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
         client = gspread.authorize(credentials)
         sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
         return sheet
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(f"Spreadsheet with ID '{spreadsheet_id}' not found.")
+    except gspread.exceptions.WorksheetNotFound:
+        st.error(f"Worksheet '{worksheet_name}' not found.")
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
-        return None
+    return None
 
-# Fetch data
-def fetch_data(spreadsheet_id, worksheet_name):
+# Fetch data from Google Sheet
+def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
     if not sheet:
         return pd.DataFrame()
 
-    data = sheet.get_all_values()
-    if not data:
+    try:
+        data = sheet.get_all_values()
+        if data:
+            headers = pd.Series(data[0]).fillna('').str.strip()
+            headers = headers.where(headers != '', other='Unnamed')
+            headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
+            df = pd.DataFrame(data[1:], columns=headers)
+            df.replace('', pd.NA, inplace=True)
+            df.ffill(inplace=True)
+            if 'hr' in df.columns:
+                df['hr'] = pd.to_numeric(df['hr'], errors='coerce').fillna(0)
+            return df
+        else:
+            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error fetching data from worksheet: {e}")
         return pd.DataFrame()
 
-    df = pd.DataFrame(data[1:], columns=[h.strip().lower() for h in data[0]])
-    return df
-
-# Preprocess data
+# Load and preprocess data
 @st.cache_data
-def load_data():
-    df = fetch_data(SPREADSHEET_ID, WORKSHEET_NAME)
+def load_data(spreadsheet_id, sheet_name):
+    data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
 
-    # Basic cleaning
-    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-    df = df.replace('', pd.NA)
-    df.dropna(subset=["student id", "student", "mm"], inplace=True)
+    # Clean column names
+    data.columns = data.columns.str.strip().str.lower()
 
-    # Lowercase for consistent filtering
-    df["student id"] = df["student id"].str.lower()
-    df["student"] = df["student"].str.lower()
+    required_columns = [
+        "mm","date", "subject", "hr", "teachers name",
+        "chapter taken", "type of class", "student id", "student"
+    ]
+    missing_columns = set(required_columns) - set(data.columns)
+    if missing_columns:
+        raise ValueError(f"Missing columns in data: {missing_columns}")
 
-    # Convert mm to int (from '04' etc.)
-    df["mm"] = pd.to_numeric(df["mm"], errors="coerce").fillna(0).astype(int)
+    # Keep only required columns
+    data = data[required_columns]
 
-    # Date and hr cleanup
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["hr"] = pd.to_numeric(df["hr"], errors="coerce").fillna(0)
+    # Clean text columns
+    data["student id"] = data["student id"].astype(str).str.lower().str.strip()
+    data["student"] = data["student"].astype(str).str.lower().str.strip()
 
-    return df
+    # Convert MM to integer for easy filtering
+    data["mm"] = pd.to_numeric(data["mm"], errors="coerce").fillna(0).astype(int)
 
-# Streamlit main
+    # Convert hr to numeric
+    data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
+
+    # DEBUG: Show raw date samples before parsing
+    st.write("Raw dates sample (first 5):", data["date"].head(5).tolist())
+
+    # Try parsing date with common format DD/MM/YYYY
+    data["date"] = pd.to_datetime(data["date"], format="%d/%m/%Y", errors="coerce")
+
+    # Check for unparsed dates and fallback to generic parsing
+    if data["date"].isna().any():
+        data["date"] = pd.to_datetime(data["date"].astype(str), errors="coerce")
+
+    # Warn if still missing dates
+    if data["date"].isna().any():
+        st.warning("Warning: Some dates could not be parsed and are missing.")
+
+    return data
+
+# Main app function
 def main():
-    st.title("🎓 Student Insights")
+    st.title("Student Insights and Analysis")
 
-    df = load_data()
+    # Load data with error handling
+    try:
+        student_data = load_data(SPREADSHEET_ID, WORKSHEET_NAME)
+    except ValueError as e:
+        st.error(str(e))
+        return
 
-    student_id = st.text_input("Enter Student ID").strip().lower()
-    name_part = st.text_input("Enter part of your name (min 4 characters)").strip().lower()
-    month = st.selectbox("Pick Month", list(range(1, 13)))
+    student_id = st.text_input("Enter Your Student ID").strip().lower()
+    student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
+    month = st.selectbox("Pick Month", list(range(4, 13)))
 
     if st.button("Fetch Data"):
-        if not student_id or len(name_part) < 4:
-            st.error("Enter a valid Student ID and at least 4 letters of your name.")
+        if not student_id or len(student_name_part) < 4:
+            st.error("Please enter a valid Student ID and at least 4 characters of your name.")
             return
 
-        # First filter: by ID and partial name
-        filtered = df[
-            (df["student id"] == student_id) &
-            (df["student"].str.contains(name_part, na=False))
+        filtered_data = student_data[
+            (student_data["student id"] == student_id) &
+            (student_data["student"].str.contains(student_name_part, na=False)) &
+            (student_data["mm"] == month)
         ]
 
-        if filtered.empty:
-            st.warning("No matching student found.")
-            return
+        if not filtered_data.empty:
+            student_name = filtered_data["student"].iloc[0].title()
+            st.subheader(f"Welcome, {student_name}!")
 
-        # Second filter: by selected month
-        filtered = filtered[filtered["mm"] == month]
+            # Format date for display
+            filtered_data = filtered_data.dropna(subset=["date"])
+            filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
 
-        if filtered.empty:
-            st.warning(f"No data found for month {month:02d}.")
-            return
+            # Show detailed data without student id and student name
+            final_data = filtered_data.drop(columns=["student id", "student"]).reset_index(drop=True)
 
-        student_name = filtered["student"].iloc[0].title()
-        st.subheader(f"Welcome, {student_name}")
+            st.write("**Your Monthly Class Details**")
+            st.dataframe(final_data)
 
-        # Show class details
-        show_cols = [c for c in filtered.columns if c not in ["teacher id ", "student", "mm","year"]]
-        st.dataframe(filtered[show_cols].reset_index(drop=True))
+            # Subject-wise hour summary
+            subject_hours = (
+                filtered_data.groupby("subject")["hr"]
+                .sum()
+                .reset_index()
+                .rename(columns={"hr": "Total Hours"})
+            )
+            st.subheader("Subject-wise Hour Breakdown")
+            st.dataframe(subject_hours)
 
-        # Subject-wise summary
-        subject_summary = filtered.groupby("subject")["hr"].sum().reset_index()
-        subject_summary.rename(columns={"hr": "Total Hours"}, inplace=True)
-        st.subheader("Subject-wise Hours")
-        st.dataframe(subject_summary)
+            # Total hours
+            total_hours = filtered_data["hr"].sum()
+            st.write(f"**Total Hours:** {total_hours:.2f}")
 
-        # Weekly summary
-        filtered["week"] = filtered["date"].dt.isocalendar().week
-        weekly_summary = filtered.groupby("week")["hr"].sum().reset_index()
-        weekly_summary.rename(columns={"hr": "Weekly Total Hours"}, inplace=True)
-        st.subheader("Weekly Hours")
-        st.dataframe(weekly_summary)
+            # Weekly hours breakdown
+            filtered_data["week"] = pd.to_datetime(filtered_data["date"], format='%d/%m/%Y').dt.isocalendar().week
+            weekly_hours = (
+                filtered_data.groupby("week")["hr"]
+                .sum()
+                .reset_index()
+                .rename(columns={"hr": "Weekly Total Hours"})
+            )
+            st.subheader("Weekly Hour Breakdown")
+            st.dataframe(weekly_hours)
 
-        # Total
-        st.write(f"**Total Hours this month:** {filtered['hr'].sum():.2f}")
+        else:
+            st.error(
+                f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')})."
+            )
 
 if __name__ == "__main__":
     main()
