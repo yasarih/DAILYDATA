@@ -80,7 +80,7 @@ def load_data(spreadsheet_id, sheet_name):
     data.columns = data.columns.str.strip().str.lower()
 
     required_columns = [
-        "MM","date", "subject", "hr", "teachers name",
+        "mm","date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
