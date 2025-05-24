@@ -117,7 +117,7 @@ def main():
         filtered_data = student_data[
             (student_data["student id"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False)) &
-            (student_data["MM"] == month)
+            (student_data["mm"] == month)
         ]
 
         if not filtered_data.empty:
