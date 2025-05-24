@@ -3,6 +3,7 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 import gspread
 import json
+import calendar
 
 # Constants
 SPREADSHEET_ID = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
@@ -79,8 +80,11 @@ def load_data(spreadsheet_id, sheet_name):
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
     data.columns = data.columns.str.strip().str.lower()
 
+    # Uncomment this to debug columns
+    # st.write("Loaded columns:", data.columns.tolist())
+
     required_columns = [
-        "mm","date", "subject", "hr", "teachers name",
+        "mm", "date", "subject", "hr", "teachers name",
         "chapter taken", "type of class", "student id", "student"
     ]
     missing_columns = set(required_columns) - set(data.columns)
@@ -92,11 +96,12 @@ def load_data(spreadsheet_id, sheet_name):
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
     data["date"] = pd.to_datetime(data["date"], errors="coerce")
+    data["mm"] = pd.to_numeric(data["mm"], errors="coerce").fillna(0).astype(int)
     return data
 
 # Main app
 def main():
-    st.title("Student Insights and Analysis")
+    st.title("🎓 Student Insights and Analysis")
 
     # Load data
     try:
@@ -107,7 +112,9 @@ def main():
 
     student_id = st.text_input("Enter Your Student ID").strip().lower()
     student_name_part = st.text_input("Enter Any Part of Your Name (minimum 4 characters)").strip().lower()
-    month = st.selectbox("Pick Month", list(range(4, 13)))
+
+    month_names = {i: calendar.month_name[i] for i in range(4, 13)}
+    month = st.selectbox("Pick Month", options=list(month_names.keys()), format_func=lambda x: month_names[x])
 
     if st.button("Fetch Data"):
         if not student_id or len(student_name_part) < 4:
@@ -121,10 +128,12 @@ def main():
         ]
 
         if not filtered_data.empty:
+            filtered_data = filtered_data.copy()
+
             student_name = filtered_data["student"].iloc[0].title()
             st.subheader(f"Welcome, {student_name}!")
 
-            # Clean and format data
+            # Format date
             filtered_data["date"] = pd.to_datetime(filtered_data["date"], errors="coerce")
             filtered_data.dropna(subset=["date"], inplace=True)
             filtered_data["date"] = filtered_data["date"].dt.strftime('%d/%m/%Y')
@@ -140,7 +149,7 @@ def main():
                 .reset_index()
                 .rename(columns={"hr": "Total Hours"})
             )
-            st.subheader("Subject-wise Hour Breakdown")
+            st.subheader("📚 Subject-wise Hour Breakdown")
             st.dataframe(subject_hours)
 
             total_hours = filtered_data["hr"].sum()
@@ -153,12 +162,12 @@ def main():
                 .reset_index()
                 .rename(columns={"hr": "Weekly Total Hours"})
             )
-            st.subheader("Weekly Hour Breakdown")
+            st.subheader("🗓️ Weekly Hour Breakdown")
             st.dataframe(weekly_hours)
 
         else:
             st.error(
-                f"No data found for the given Student ID, Name, and selected month ({pd.to_datetime(f'2024-{month}-01').strftime('%B')})."
+                f"No data found for the given Student ID, Name, and selected month ({calendar.month_name[month]})."
             )
 
 # Run the app
