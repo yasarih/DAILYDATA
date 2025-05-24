@@ -113,7 +113,7 @@ def main():
         st.subheader(f"Welcome, {student_name}")
 
         # Show class details
-        show_cols = [c for c in filtered.columns if c not in ["student id", "student", "mm"]]
+        show_cols = [c for c in filtered.columns if c not in ["teacher id ", "student", "mm","year"]]
         st.dataframe(filtered[show_cols].reset_index(drop=True))
 
         # Subject-wise summary
