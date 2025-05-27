@@ -77,6 +77,18 @@ def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Teacher-Class Daily Logbook")
 
+
+     # 🔁 Refresh button
+    if st.button("🔄 Refresh Data from Google Sheets"):
+        st.cache_data.clear()
+        st.success("Data refreshed successfully. Please proceed.")
+        st.experimental_rerun()
+
+    
+
+
+    
+
     sheet_id = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
     class_df = fetch_data(sheet_id, "Student class details")
     student_df = fetch_data(sheet_id, "Student Data")
