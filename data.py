@@ -79,7 +79,7 @@ def main():
 
 
      # 🔁 Refresh button
-    if st.button("🔄 Refresh Data from Google Sheets"):
+    if st.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.success("Data refreshed successfully. Please proceed.")
         st.experimental_rerun()
