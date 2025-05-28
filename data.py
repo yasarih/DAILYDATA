@@ -82,7 +82,7 @@ def main():
     if st.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.success("Data refreshed successfully. Please proceed.")
-        st.experimental_rerun()
+        st.rerun()
 
     
 
