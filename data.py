@@ -131,7 +131,7 @@ def main():
             st.success(f"Welcome, {teacher_name}!")
             st.write(f"Your Supalearn UserID: **{filtered['Supalearn Password'].iloc[0]}**")
 
-                        profile_data = get_teacher_profile(teacher_id, profile_df)
+            profile_data = get_teacher_profile(teacher_id, profile_df)
             if not profile_data.empty:
                 st.write("## 👩‍🏫 Teacher Profile")
                 st.markdown("*(For any modifications or support, please reach out to the Teacher Manager.)*")
