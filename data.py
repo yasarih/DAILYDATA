@@ -73,6 +73,12 @@ def highlight_duplicates(df):
 def to_csv_download(df, filename="teacher_log.csv"):
     return df.to_csv(index=False).encode("utf-8")
 
+def get_teacher_profile(teacher_id, profile_df):
+    profile_df['Teacher id'] = profile_df['Teacher id'].str.strip().str.lower()
+    profile_row = profile_df[profile_df['Teacher id'] == teacher_id]
+    return profile_row
+
+
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Teacher-Class Daily Logbook")
@@ -83,15 +89,11 @@ def main():
         st.cache_data.clear()
         st.success("Data refreshed successfully. Please proceed.")
         st.rerun()
-
-    
-
-
-    
-
+ 
     sheet_id = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
     class_df = fetch_data(sheet_id, "Student class details")
     student_df = fetch_data(sheet_id, "Student Data")
+    profile_df = fetch_data(sheet_id, "Profile")
 
     role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
 
@@ -129,9 +131,57 @@ def main():
             st.success(f"Welcome, {teacher_name}!")
             st.write(f"Your Supalearn UserID: **{filtered['Supalearn Password'].iloc[0]}**")
 
+                        profile_data = get_teacher_profile(teacher_id, profile_df)
+            if not profile_data.empty:
+                st.write("## 👩‍🏫 Teacher Profile")
+                st.markdown("*(For any modifications or support, please reach out to the Teacher Manager.)*")
+                st.write(f"**Phone:** {profile_data['Phone number'].values[0]}")
+                st.write(f"**Email:** {profile_data['Mail. id'].values[0]}")
+                lang_col = 'Language preffered  in Class'
+                if lang_col in profile_data.columns:
+                    st.write(f"**Teaching Language Preference:** {profile_data[lang_col].values[0]}")
+                else:
+                    st.write("**Teaching Language Preference:** Not available")
+
+                st.write(f"**Qualification:** {profile_data['Qualification'].values[0]}")
+                subjects = profile_data.iloc[0, 11:]
+
+                # Detect syllabus expertise
+                syllabus_columns = ["IGCSE", "CBSE", "ICSE"]
+                handled_syllabus = []
+
+                for col in syllabus_columns:
+                    if col in profile_data.columns:
+                        if str(profile_data[col].values[0]).strip().upper() == "YES":
+                            handled_syllabus.append(col)
+
+                if handled_syllabus:
+                    st.write("**Syllabus Expertise:**")
+                    st.markdown(", ".join(handled_syllabus))
+                else:
+                    st.write("No syllabus expertise marked.")
+
+                handled_subjects = subjects[subjects != ''].index.tolist()
+                
+
+                subjects = profile_data.iloc[0, 12:]  # From subject columns onward
+                handled_subjects = subjects[subjects != '']
+
+                if not handled_subjects.empty:
+                    st.write("**Subjects Handled**")
+                    for subject, level in handled_subjects.items():
+                        st.markdown(f"- **{subject}** : Upto {level}th")
+                else:
+                    st.write("No subjects assigned.")
+
+            else:
+                st.warning("No profile data found for this teacher.")
+
+
             summary = merged_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]]
             summary = summary.sort_values(by=["Date", "Student ID"]).reset_index(drop=True)
 
+            st.write("## 📖 Teaching Logbook")
             st.dataframe(highlight_duplicates(summary), use_container_width=True)
 
             st.download_button("📥 Download Class Summary", data=to_csv_download(summary),
