@@ -145,7 +145,7 @@ def main():
 
                 st.write(f"**Qualification:** {profile_data['Qualification'].values[0]}")
                 st.write(f"**Available Slots:** {profile_data['Available Slots'].values[0]}")
-                subjects = profile_data.iloc[0, 12:]
+                subjects = profile_data.iloc[0, 12:35]
 
                 # Detect syllabus expertise
                 syllabus_columns = ["IGCSE", "CBSE", "ICSE"]
