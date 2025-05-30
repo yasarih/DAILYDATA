@@ -165,7 +165,7 @@ def main():
                 handled_subjects = subjects[subjects != ''].index.tolist()
                 
 
-                subjects = profile_data.iloc[0, 12:]  # From subject columns onward
+                subjects = profile_data.iloc[0, 12:35]  # From subject columns onward
                 handled_subjects = subjects[subjects != '']
 
                 if not handled_subjects.empty:
