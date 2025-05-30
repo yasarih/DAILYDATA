@@ -144,7 +144,8 @@ def main():
                     st.write("**Teaching Language Preference:** Not available")
 
                 st.write(f"**Qualification:** {profile_data['Qualification'].values[0]}")
-                subjects = profile_data.iloc[0, 11:]
+                st.write(f"**Available Slots:** {profile_data['Available Slots'].values[0]}")
+                subjects = profile_data.iloc[0, 12:]
 
                 # Detect syllabus expertise
                 syllabus_columns = ["IGCSE", "CBSE", "ICSE"]
