@@ -137,7 +137,7 @@ def main():
                 st.markdown("*(For any modifications or support, please reach out to the Teacher Manager.)*")
                 st.write(f"**Phone:** {profile_data['Phone number'].values[0]}")
                 st.write(f"**Email:** {profile_data['Mail. id'].values[0]}")
-                lang_col = 'Language preffered  in Class'
+                lang_col = 'Language preferred  in Class'
                 if lang_col in profile_data.columns:
                     st.write(f"**Teaching Language Preference:** {profile_data[lang_col].values[0]}")
                 else:
