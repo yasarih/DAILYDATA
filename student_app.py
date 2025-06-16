@@ -126,7 +126,7 @@ def main():
             return
 
         filtered_data = student_data[
-            (student_data["student id"] == student_id) &
+            (student_data["Student ID"] == student_id) &
             (student_data["student"].str.contains(student_name_part, na=False))
         ]
 
