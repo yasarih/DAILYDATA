@@ -18,8 +18,7 @@ st.set_page_config(
 # Load credentials from Streamlit secrets
 def load_credentials_from_secrets():
     try:
-        # If your secret is already a dict/AttrDict, just return it directly
-        credentials_info = st.secrets["google_credentials_new_project"]
+        credentials_info = dict(st.secrets["google_credentials_new_project"])  # convert to dict
         return credentials_info
     except KeyError:
         st.error("Google credentials not found in Streamlit secrets.")
@@ -51,6 +50,7 @@ def connect_to_google_sheets(spreadsheet_id, worksheet_name):
         st.error(f"Error connecting to Google Sheets: {e}")
     return None
 
+
 # Fetch data from Google Sheet
 def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
     sheet = connect_to_google_sheets(spreadsheet_id, worksheet_name)
@@ -59,27 +59,30 @@ def fetch_data_from_sheet(spreadsheet_id, worksheet_name):
 
     try:
         data = sheet.get_all_values()
-        if data:
-            headers = pd.Series(data[0]).fillna('').str.strip()
-            # Ensure unique column names for duplicates (Unnamed, Unnamed1, etc.)
-            headers = headers.where(headers != '', other='Unnamed')
-            headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
-            df = pd.DataFrame(data[1:], columns=headers)
-            df.replace('', pd.NA, inplace=True)
-            df.ffill(inplace=True)  # forward fill missing cells
-            if 'hr' in df.columns:
-                df['hr'] = pd.to_numeric(df['hr'], errors='coerce').fillna(0)
-            return df
-        else:
+        if not data:
             return pd.DataFrame()
+
+        headers = pd.Series(data[0]).fillna('').str.strip()
+        headers = headers.where(headers != '', other='Unnamed')
+        headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
+        df = pd.DataFrame(data[1:], columns=headers)
+        df.replace('', pd.NA, inplace=True)
+        df.ffill(inplace=True)
+        if 'hr' in df.columns:
+            df['hr'] = pd.to_numeric(df['hr'], errors='coerce').fillna(0)
+        return df
     except Exception as e:
         st.error(f"Error fetching data from worksheet: {e}")
         return pd.DataFrame()
 
+
 # Load and preprocess data
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_data(spreadsheet_id, sheet_name):
     data = fetch_data_from_sheet(spreadsheet_id, sheet_name)
+    if data.empty:
+        return pd.DataFrame()
+
     data.columns = data.columns.str.strip().str.lower()
 
     required_columns = [
@@ -96,15 +99,14 @@ def load_data(spreadsheet_id, sheet_name):
     data["student"] = data["student"].astype(str).str.lower().str.strip()
     data["hr"] = pd.to_numeric(data["hr"], errors="coerce").fillna(0)
 
-    # Parse dates; dayfirst=True if your dates are DD/MM/YYYY
     data["date"] = pd.to_datetime(data["date"], errors="coerce", dayfirst=True)
 
-    # Show warning if dates couldn't be parsed
     failed_dates = data["date"].isna().sum()
     if failed_dates > 0:
         st.warning(f"Warning: {failed_dates} date entries could not be parsed and will show as empty.")
 
     return data
+
 
 def main():
     st.title("Student Insights and Analysis")
@@ -132,21 +134,16 @@ def main():
             student_name = filtered_data["student"].iloc[0].title()
             st.subheader(f"Welcome, {student_name}!")
 
-            # Work on a copy to avoid warnings
             filtered_data_copy = filtered_data.copy()
-
-            # Fill NA dates with a placeholder string **before** formatting
             filtered_data_copy["date"] = filtered_data_copy["date"].fillna(pd.NaT)
-            # Format dates - for NaT will stay as NaT
             filtered_data_copy["date_str"] = filtered_data_copy["date"].dt.strftime('%d/%m/%Y')
-            # Replace NaT formatted as 'NaT' string with 'Date not available'
-            filtered_data_copy["date_str"] = filtered_data_copy["date_str"].replace("NaT", "Date not available")
+            filtered_data_copy["date_str"] = filtered_data_copy["date_str"].where(
+                filtered_data_copy["date"].notna(), "Date not available"
+            )
 
-            # Replace old date column with formatted string version
             filtered_data_copy.drop(columns=["date"], inplace=True)
             filtered_data_copy.rename(columns={"date_str": "date"}, inplace=True)
 
-            # Drop student id and student columns for display
             final_data = filtered_data_copy.drop(columns=["student id", "student"]).reset_index(drop=True)
 
             subject_hours = (
@@ -165,6 +162,7 @@ def main():
             st.write(f"**Total Hours:** {total_hours:.2f}")
         else:
             st.error("No data found for the given Student ID and Name.")
+
 
 if __name__ == "__main__":
     main()
