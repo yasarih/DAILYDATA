@@ -78,129 +78,101 @@ def get_teacher_profile(teacher_id, profile_df):
     profile_row = profile_df[profile_df['Teacher id'] == teacher_id]
     return profile_row
 
-
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
-    st.title("Teacher-Class Daily Logbook")
+    st.title("Angle Belearn - Teacher Dashboard")
 
-
-     # 🔁 Refresh button
-    if st.button("🔄 Refresh Data"):
+    if st.sidebar.button("🔄 Refresh Data"):
         st.cache_data.clear()
-        st.success("Data refreshed successfully. Please proceed.")
-        st.rerun()
- 
+        st.experimental_rerun()
+
     sheet_id = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
     class_df = fetch_data(sheet_id, "Student class details")
     student_df = fetch_data(sheet_id, "Student Data")
     profile_df = fetch_data(sheet_id, "Profile")
 
-    role = st.sidebar.radio("Select your role:", ["Select", "Student", "Teacher"], index=0)
+    st.subheader("🔐 Login")
+    teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+    teacher_pass = st.text_input("Enter last 4 digits of your phone number")
+    month = st.selectbox("Pick Month", list(range(4, 13)))
+    month_str = f"{month:02}"
 
-    if role == "Teacher":
-        st.subheader("Teacher Login")
-        teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
-        teacher_pass = st.text_input("Enter last 4 digits of your phone number")
-        month = st.selectbox("Pick Month", list(range(4, 13)))
-        month_str = f"{month:02}"
+    if st.button("Login"):
+        if class_df.empty:
+            st.error("Class data not available.")
+            return
 
-        if st.button("Verify Teacher"):
-            if class_df.empty:
-                st.error("Class data not available.")
-                return
+        df = class_df.copy()
+        df['Teachers ID'] = df['Teachers ID'].str.strip().str.lower()
+        df['Password'] = df['Password'].astype(str).str.strip()
+        df['MM'] = df['MM'].astype(str).str.zfill(2)
 
-            df = class_df.copy()
-            df['Teachers ID'] = df['Teachers ID'].str.strip().str.lower()
-            df['Password'] = df['Password'].astype(str).str.strip()
-            df['MM'] = df['MM'].astype(str).str.zfill(2)
+        filtered = df[
+            (df['Teachers ID'] == teacher_id) &
+            (df['Password'] == teacher_pass) &
+            (df['MM'] == month_str)
+        ]
 
-            filtered = df[
-                (df['Teachers ID'] == teacher_id) &
-                (df['Password'] == teacher_pass) &
-                (df['MM'] == month_str)
-            ]
+        if filtered.empty:
+            st.error("Invalid credentials or no data for this month.")
+            return
 
-            if filtered.empty:
-                st.error("Invalid credentials or no data for this month.")
-                return
+        teacher_name = filtered['Teachers Name'].iloc[0].title()
+        st.session_state.teacher_name = teacher_name
+        st.session_state.teacher_id = teacher_id
+        st.session_state.filtered_data = filtered
+        st.session_state.merged_data = merge_teacher_student(filtered, student_df)
+        st.session_state.profile_data = get_teacher_profile(teacher_id, profile_df)
 
-            teacher_name = filtered['Teachers Name'].iloc[0].title()
-            st.session_state.teacher_name = teacher_name
+        st.success(f"Welcome, {teacher_name}!")
+        st.rerun()
 
-            merged_data = merge_teacher_student(filtered, student_df)
-            st.success(f"Welcome, {teacher_name}!")
-            st.write(f"Your Supalearn UserID: **{filtered['Supalearn Password'].iloc[0]}**")
+    # After successful login
+    if "teacher_name" in st.session_state:
+        tab1, tab2, tab3 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details"])
 
-            profile_data = get_teacher_profile(teacher_id, profile_df)
+        with tab1:
+            st.subheader("👩‍🏫 Teacher Profile")
+            profile_data = st.session_state.profile_data
             if not profile_data.empty:
-                st.write("## 👩‍🏫 Teacher Profile")
-                st.markdown("*(For any modifications or support, please reach out to the Teacher Manager.)*")
                 st.write(f"**Phone:** {profile_data['Phone number'].values[0]}")
                 st.write(f"**Email:** {profile_data['Mail. id'].values[0]}")
-                lang_col = 'Language preferred  in Class'
-                if lang_col in profile_data.columns:
-                    st.write(f"**Teaching Language Preference:** {profile_data[lang_col].values[0]}")
-                else:
-                    st.write("**Teaching Language Preference:** Not available")
-
                 st.write(f"**Qualification:** {profile_data['Qualification'].values[0]}")
                 st.write(f"**Available Slots:** {profile_data['Available Slots'].values[0]}")
-                subjects = profile_data.iloc[0, 12:35]
 
-                # Detect syllabus expertise
+                lang_col = 'Language preferred  in Class'
+                if lang_col in profile_data.columns:
+                    st.write(f"**Language Preference:** {profile_data[lang_col].values[0]}")
+
                 syllabus_columns = ["IGCSE", "CBSE", "ICSE"]
-                handled_syllabus = []
+                syllabus = [col for col in syllabus_columns if col in profile_data.columns and str(profile_data[col].values[0]).strip().upper() == "YES"]
+                st.write("**Syllabus Expertise:** " + ", ".join(syllabus) if syllabus else "No syllabus marked.")
 
-                for col in syllabus_columns:
-                    if col in profile_data.columns:
-                        if str(profile_data[col].values[0]).strip().upper() == "YES":
-                            handled_syllabus.append(col)
-
-                if handled_syllabus:
-                    st.write("**Syllabus Expertise:**")
-                    st.markdown(", ".join(handled_syllabus))
-                else:
-                    st.write("No syllabus expertise marked.")
-
-                handled_subjects = subjects[subjects != ''].index.tolist()
-                
-
-                subjects = profile_data.iloc[0, 12:35]  # From subject columns onward
-                handled_subjects = subjects[subjects != '']
-
-                if not handled_subjects.empty:
+                subjects = profile_data.iloc[0, 12:35]
+                subjects = subjects[subjects != '']
+                if not subjects.empty:
                     st.write("**Subjects Handled**")
-                    for subject, level in handled_subjects.items():
+                    for subject, level in subjects.items():
                         st.markdown(f"- **{subject}** : Upto {level}th")
                 else:
-                    st.write("No subjects assigned.")
+                    st.write("No subjects listed.")
 
-            else:
-                st.warning("No profile data found for this teacher.")
-
-
-            summary = merged_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]]
+        with tab2:
+            st.subheader("📖 Daily Class Log")
+            summary = st.session_state.merged_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]]
             summary = summary.sort_values(by=["Date", "Student ID"]).reset_index(drop=True)
 
-            st.write("## 📖 Teaching Logbook")
             st.dataframe(highlight_duplicates(summary), use_container_width=True)
+            st.download_button("📥 Download Summary", data=to_csv_download(summary), file_name=f"{st.session_state.teacher_name}_summary.csv", mime="text/csv")
 
-            st.download_button("📥 Download Class Summary", data=to_csv_download(summary),
-                               file_name=f"{teacher_name}_summary.csv", mime="text/csv")
+            st.write("## ⏱️ Consolidated Class Hours")
+            grouped = summary.groupby(["Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
+            st.dataframe(grouped, use_container_width=True)
 
-            st.write("## Consolidated Summary")
-            group = summary.groupby(["Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
-            st.dataframe(group, use_container_width=True)
-
-            st.write("## Student + EM Info")
-            em_part = merged_data[['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates()
-            st.dataframe(em_part.sort_values(by="Student"), use_container_width=True)
-
-    elif role == "Student":
-        st.subheader("Student Login")
-        st.info("(Student interface coming soon...)")
-    else:
-        st.info("Please select a role from the sidebar.")
+        with tab3:
+            st.subheader("👥 Assigned Students & EM Info")
+            em_data = st.session_state.merged_data[['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates()
+            st.dataframe(em_data.sort_values(by="Student"), use_container_width=True)
 
 if __name__ == "__main__":
     main()
