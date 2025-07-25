@@ -84,7 +84,7 @@ def main():
 
     if st.sidebar.button("🔄 Refresh Data"):
         st.cache_data.clear()
-        st.experimental_rerun()
+        st.rerun()
 
     sheet_id = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
     class_df = fetch_data(sheet_id, "Student class details")
