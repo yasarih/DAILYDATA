@@ -77,6 +77,35 @@ def get_teacher_profile(teacher_id, profile_df):
     profile_df['Teacher id'] = profile_df['Teacher id'].str.strip().str.lower()
     profile_row = profile_df[profile_df['Teacher id'] == teacher_id]
     return profile_row
+def get_supaleran_demofit(teacher_id, supa_demofit_df):
+    # Clean Teacher ID column
+    supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].astype(str).str.strip().str.lower()
+    teacher_id = str(teacher_id).strip().lower()
+
+    # Filter row for given teacher
+    row = supa_demofit_df[supa_demofit_df['Teacher id'] == teacher_id]
+
+    if not row.empty:
+        supalearn_id = row['SupalearnID'].iloc[0] if 'SupalearnID' in row.columns else None
+        demofit = row['DemoFit'].iloc[0] if 'DemoFit' in row.columns else None
+        return supalearn_id, demofit
+    else:
+        return None, None
+    
+def get_teacher_details(teacher_id, supa_demofit_df):
+    # Normalize for matching
+    supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].str.strip().str.lower()
+    teacher_id = teacher_id.strip().lower()
+    
+    row = supa_demofit_df[supa_demofit_df['Teacher id'] == teacher_id]
+    if not row.empty:
+        teacher_name = row.iloc[0]['Teacher Name']
+        supalearn_id = row.iloc[0]['SupalearnID']
+        demofit = row.iloc[0]['DemoFit']
+        return teacher_name, supalearn_id, demofit
+    else:
+        return None, None, None
+
 
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
@@ -90,6 +119,7 @@ def main():
     class_df = fetch_data(sheet_id, "Student class details")
     student_df = fetch_data(sheet_id, "Student Data")
     profile_df = fetch_data(sheet_id, "Profile")
+    supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
 
     st.subheader("🔐 Login")
     teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
@@ -117,18 +147,26 @@ def main():
             st.error("Invalid credentials or no data for this month.")
             return
 
-        teacher_name = filtered['Teachers Name'].iloc[0].title()
-        st.session_state.teacher_name = teacher_name
+        # Save to session_state
+        st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title()
         st.session_state.teacher_id = teacher_id
         st.session_state.filtered_data = filtered
         st.session_state.merged_data = merge_teacher_student(filtered, student_df)
         st.session_state.profile_data = get_teacher_profile(teacher_id, profile_df)
 
-        st.success(f"Welcome, {teacher_name}!")
+        # Supalearn + DemoFit
+        supalearn_id, demofit = get_supaleran_demofit(teacher_id, supa_demofit_df)
+        st.session_state.supalearn_id = supalearn_id
+        st.session_state.demofit = demofit
         st.rerun()
 
     # After successful login
     if "teacher_name" in st.session_state:
+        # Welcome block BEFORE tabs
+        st.success(f"Welcome, {st.session_state.teacher_name}! 🎉")
+        st.info(f"**Supalearn ID:** {st.session_state.supalearn_id if st.session_state.supalearn_id else 'Not Found'}")
+        st.info(f"**Class Quality:** {st.session_state.demofit if st.session_state.demofit else 'Not Found'}")
+
         tab1, tab2, tab3 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details"])
 
         with tab1:
@@ -163,7 +201,8 @@ def main():
             summary = summary.sort_values(by=["Date", "Student ID"]).reset_index(drop=True)
 
             st.dataframe(highlight_duplicates(summary), use_container_width=True)
-            st.download_button("📥 Download Summary", data=to_csv_download(summary), file_name=f"{st.session_state.teacher_name}_summary.csv", mime="text/csv")
+            st.download_button("📥 Download Summary", data=to_csv_download(summary),
+                               file_name=f"{st.session_state.teacher_name}_summary.csv", mime="text/csv")
 
             st.write("## ⏱️ Consolidated Class Hours")
             grouped = summary.groupby(["Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
@@ -173,6 +212,7 @@ def main():
             st.subheader("👥 Assigned Students & EM Info")
             em_data = st.session_state.merged_data[['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates()
             st.dataframe(em_data.sort_values(by="Student"), use_container_width=True)
+
 
 if __name__ == "__main__":
     main()
