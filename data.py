@@ -77,26 +77,21 @@ def get_teacher_profile(teacher_id, profile_df):
     profile_df['Teacher id'] = profile_df['Teacher id'].str.strip().str.lower()
     profile_row = profile_df[profile_df['Teacher id'] == teacher_id]
     return profile_row
+
 def get_supaleran_demofit(teacher_id, supa_demofit_df):
-    # Clean Teacher ID column
     supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].astype(str).str.strip().str.lower()
     teacher_id = str(teacher_id).strip().lower()
-
-    # Filter row for given teacher
     row = supa_demofit_df[supa_demofit_df['Teacher id'] == teacher_id]
-
     if not row.empty:
         supalearn_id = row['SupalearnID'].iloc[0] if 'SupalearnID' in row.columns else None
         demofit = row['DemoFit'].iloc[0] if 'DemoFit' in row.columns else None
         return supalearn_id, demofit
     else:
         return None, None
-    
+
 def get_teacher_details(teacher_id, supa_demofit_df):
-    # Normalize for matching
     supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].str.strip().str.lower()
     teacher_id = teacher_id.strip().lower()
-    
     row = supa_demofit_df[supa_demofit_df['Teacher id'] == teacher_id]
     if not row.empty:
         teacher_name = row.iloc[0]['Teacher Name']
@@ -105,7 +100,6 @@ def get_teacher_details(teacher_id, supa_demofit_df):
         return teacher_name, supalearn_id, demofit
     else:
         return None, None, None
-
 
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
@@ -162,10 +156,42 @@ def main():
 
     # After successful login
     if "teacher_name" in st.session_state:
-        # Welcome block BEFORE tabs
         st.success(f"Welcome, {st.session_state.teacher_name}! 🎉")
         st.info(f"**Supalearn ID:** {st.session_state.supalearn_id if st.session_state.supalearn_id else 'Not Found'}")
         st.info(f"**Class Quality:** {st.session_state.demofit if st.session_state.demofit else 'Not Found'}")
+
+        # Filter ForSupalearnID data for current teacher
+        qual_df = supa_demofit_df.copy()
+        qual_df.columns = qual_df.columns.str.strip()
+
+        teacher_id = st.session_state.teacher_id.strip().lower()
+        qual_df['Teacher id'] = qual_df['Teacher id'].astype(str).str.strip().str.lower()
+        qual_df_filtered = qual_df[qual_df['Teacher id'] == teacher_id]
+
+        class_quality_cols = [
+            "Punctuality",
+            "Video Status (On/Off)",
+            "Communication",
+            "Network Quality (Audio/Video)",
+            "Background",
+            "Outfit",
+            "Device",
+            "Light Issue",
+            "Writing / Drawing",
+            "Issues"
+        ]
+
+        missing_cols = [col for col in class_quality_cols if col not in qual_df_filtered.columns]
+        if missing_cols:
+            st.warning(f"Missing columns in ForSupalearnID data: {missing_cols}")
+
+        display_cols = [col for col in class_quality_cols if col in qual_df_filtered.columns]
+        if not qual_df_filtered.empty and display_cols:
+            df_quality = qual_df_filtered[display_cols]
+            st.write("### 📋 Class Quality Details")
+            st.dataframe(df_quality, use_container_width=True)
+        else:
+            st.info("No class quality data found for your profile.")
 
         tab1, tab2, tab3 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details"])
 
@@ -194,6 +220,8 @@ def main():
                         st.markdown(f"- **{subject}** : Upto {level}th")
                 else:
                     st.write("No subjects listed.")
+            else:
+                st.info("No profile data available to show.")
 
         with tab2:
             st.subheader("📖 Daily Class Log")
@@ -213,7 +241,5 @@ def main():
             em_data = st.session_state.merged_data[['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates()
             st.dataframe(em_data.sort_values(by="Student"), use_container_width=True)
 
-
 if __name__ == "__main__":
     main()
-
