@@ -234,6 +234,9 @@ def main():
 
             st.write("## ⏱️ Consolidated Class Hours")
             grouped = summary.groupby(["Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
+            total_hours = summary['Hr'].sum()
+            st.write(f"### 🕒 Total Teaching Hours: {total_hours}")
+
             st.dataframe(grouped, use_container_width=True)
 
         with tab3:
@@ -243,3 +246,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
