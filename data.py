@@ -78,6 +78,12 @@ def get_teacher_profile(teacher_id, profile_df):
     profile_row = profile_df[profile_df['Teacher id'] == teacher_id]
     return profile_row
 
+def get_teacher_demobonus(teacher_id, demoBonus_df):
+    demoBonus_df['Teacher id'] = demoBonus_df['Teacher id'].str.strip().str.lower()
+    demoBonus_row = demoBonus_df[demoBonus_df['Teacher id'] == teacher_id]
+    return demoBonus_row
+
+
 def get_supaleran_demofit(teacher_id, supa_demofit_df):
     supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].astype(str).str.strip().str.lower()
     teacher_id = str(teacher_id).strip().lower()
@@ -114,6 +120,7 @@ def main():
     student_df = fetch_data(sheet_id, "Student Data")
     profile_df = fetch_data(sheet_id, "Profile")
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
+    demoBonus_df = fetch_data(sheet_id, "DemoBonus")
 
     st.subheader("🔐 Login")
     teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
@@ -220,6 +227,17 @@ def main():
                         st.markdown(f"- **{subject}** : Upto {level}th")
                 else:
                     st.write("No subjects listed.")
+
+                # Call get_teacher_demobonus properly with teacher_id and demoBonus_df
+                demobonus_data = get_teacher_demobonus(teacher_id, demoBonus_df)
+
+                # Save to session state if you want persistent access in this session
+                st.session_state.demobonus = demobonus_data
+
+                # Display DataFrame
+                st.write("**Your recent demo conversions. ₹300 reward per student converted:**")
+                st.dataframe(demobonus_data)
+
             else:
                 st.info("No profile data available to show.")
 
@@ -246,4 +264,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
