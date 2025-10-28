@@ -275,7 +275,7 @@ def main():
         # store demo bonus
         st.session_state.demobonus = get_teacher_demobonus(input_teacher_id, demoBonus_df)
 
-        st.experimental_rerun()
+        st.rerun()
 
     # After successful login
     if "teacher_name" in st.session_state:
@@ -430,3 +430,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
