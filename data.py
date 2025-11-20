@@ -326,7 +326,7 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 OverLimit Details" ,"📋 Exam Details" ])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Chapter hour variance" ,"📋 Exam Details" ])
 
         with tab1:
             st.subheader("👩‍🏫 Teacher Profile")
@@ -430,4 +430,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
