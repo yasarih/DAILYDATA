@@ -50,7 +50,7 @@ def fetch_data(sheet_id, worksheet):
         st.error(f"Error loading sheet: {e}")
         return pd.DataFrame()
 
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner=True, ttl=3600)  # ⬅️ 1 hour cache
 def merge_teacher_student(main_df, student_df):
     if main_df is None or student_df is None or main_df.empty or student_df.empty:
         return pd.DataFrame()
@@ -216,6 +216,11 @@ def get_teacher_details(teacher_id, supa_demofit_df):
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Angle Belearn - Teacher Dashboard")
+    st.info(
+    "🕒 Data in this dashboard updates **once every hour**. "
+    "This is not live data."
+)
+
 
     if st.sidebar.button("🔄 Refresh Data"):
         st.cache_data.clear()
@@ -430,6 +435,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
