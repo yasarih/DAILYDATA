@@ -233,7 +233,7 @@ def main():
     profile_df = fetch_data(sheet_id, "Profile")
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
     demoBonus_df = fetch_data(sheet_id, "DemoBonus")
-    overlimit_df = fetch_data(sheet_id2, "OverlimitCall")
+    
     examlist_df = fetch_data(sheet_id2, "ExamList")
 
     st.subheader("🔐 Login")
@@ -331,7 +331,7 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Chapter hour variance" ,"📋 Exam Details" ])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion" ,"📋 Exam Details" ])
 
         with tab1:
             st.subheader("👩‍🏫 Teacher Profile")
@@ -379,7 +379,7 @@ def main():
                 st.info("No profile data available to show.")
 
         with tab2:
-            st.subheader("📖 Daily Class Log")
+            
             merged_data = st.session_state.get('merged_data', pd.DataFrame())
             # safe column selection
             summary_cols = ["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]
@@ -416,13 +416,33 @@ def main():
                     st.dataframe(em_data, use_container_width=True)
 
         with tab4:
-            st.subheader("📋 Extra Hrs Details")
+            st.subheader("📋 Salary Calculaion")
             # use teacher_id_norm computed above
-            overfiltered = filter_overlimit_for_teacher(overlimit_df, teacher_id_norm)
-            if overfiltered is None or overfiltered.empty:
-                st.info("No overlimit/extra hours data found for your profile.")
-            else:
-                st.dataframe(overfiltered, use_container_width=True)
+            
+            st.info("""
+                ### Salary Calculation Rules
+
+                1. **Paid Classes**
+                - Salary = Number of Paid Classes × ₹100
+
+                2. **Classes Below 5th Standard**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹120
+
+                3. **CBSE / State / ICSE (Class 5 – 10)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹150
+
+                4. **CBSE / State / ICSE (Class 11 – 12)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹180
+
+                5. **IGCSE / IB (Class 8 – 10)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹170
+
+                6. **IGCSE / IB (Class 11 – 12)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹200
+                    
+                7. **No of Demo Conversions * 300**    
+                """)
+
 
         with tab5:
             st.subheader("📋 Exam Details")
@@ -435,7 +455,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 
