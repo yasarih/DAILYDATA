@@ -3,6 +3,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
+from exam_module import render_exam_tab
+
 
 st.set_page_config(page_title="Angle Belearn Insights", page_icon="🎓", layout="wide")
 
@@ -331,7 +333,7 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion" ,"📋 Exam Details" ])
+        tab5, tab1, tab2, tab3, tab4 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion"  ])
 
         with tab1:
             st.subheader("👩‍🏫 Teacher Profile")
@@ -446,16 +448,19 @@ def main():
 
         with tab5:
             st.subheader("📋 Exam Details")
-            exam_filtered = get_exam_data(teacher_id_norm, examlist_df)
-            if exam_filtered is None or exam_filtered.empty:
-                st.info("No exam data for your profile.")
-            else:
-                st.dataframe(exam_filtered, use_container_width=True)
+
+            examdetails_df = fetch_data(sheet_id, "ExamDetails")
+
+            render_exam_tab(
+                examdetails_df,
+                teacher_id_norm,
+                sheet_id,
+                load_credentials
+            )
 
 
 if __name__ == "__main__":
     main()
-
 
 
 
