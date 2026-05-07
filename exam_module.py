@@ -8,12 +8,14 @@ from google.oauth2.service_account import Credentials
 # 🧠 SAFE COLUMN FINDER
 # =========================
 def get_col(df, name):
-    name = name.lower().replace(" ", "").replace(".", "")
+
+    target = str(name).lower().replace(" ", "").replace(".", "")
 
     for col in df.columns:
+
         clean = str(col).lower().replace(" ", "").replace(".", "")
 
-        if clean == name:
+        if clean == target:
             return col
 
     return None
@@ -29,7 +31,9 @@ def render_exam_summary(df):
 
     df = df.copy()
 
-    # fill empty status
+    # -------------------------
+    # CLEAN STATUS
+    # -------------------------
     df["Exam Status"] = (
         df["Exam Status"]
         .fillna("")
@@ -37,7 +41,9 @@ def render_exam_summary(df):
         .replace("", "Not Scheduled")
     )
 
-    # date conversion
+    # -------------------------
+    # DATE CONVERSION
+    # -------------------------
     df["Exam Schedule"] = pd.to_datetime(
         df["Exam Schedule"],
         errors="coerce",
@@ -47,13 +53,17 @@ def render_exam_summary(df):
     today = pd.to_datetime("today").normalize()
 
     # -------------------------
-    # 📊 COUNTS
+    # COUNTS
     # -------------------------
     total = len(df)
 
-    completed = (df["Exam Status"] == "Completed").sum()
+    completed = (
+        df["Exam Status"] == "Completed"
+    ).sum()
 
-    scheduled = (df["Exam Status"] == "Schedule").sum()
+    scheduled = (
+        df["Exam Status"] == "Schedule"
+    ).sum()
 
     not_completed = (
         df["Exam Status"] == "Chapter Not Completed"
@@ -64,7 +74,7 @@ def render_exam_summary(df):
     ).sum()
 
     # -------------------------
-    # 🎯 METRICS
+    # METRICS
     # -------------------------
     c1, c2, c3, c4, c5 = st.columns(5)
 
@@ -77,20 +87,21 @@ def render_exam_summary(df):
     st.divider()
 
     # -------------------------
-    # ⚠️ WARNINGS
+    # NOT SCHEDULED WARNING
     # -------------------------
-
-    # NOT SCHEDULED
     missing_status = df[
         df["Exam Status"] == "Not Scheduled"
     ]
 
     if not missing_status.empty:
+
         st.warning(
             f"⚠️ {len(missing_status)} exams are NOT SCHEDULED"
         )
 
-    # OVERDUE
+    # -------------------------
+    # OVERDUE WARNING
+    # -------------------------
     overdue = df[
         (df["Exam Status"] == "Schedule")
         &
@@ -100,11 +111,14 @@ def render_exam_summary(df):
     ]
 
     if not overdue.empty:
+
         st.error(
             f"⏰ {len(overdue)} exams are OVERDUE — mark completed & enter marks"
         )
 
+    # -------------------------
     # COMPLETED BUT NO MARKS
+    # -------------------------
     missing_marks = df[
         (df["Exam Status"] == "Completed")
         &
@@ -120,6 +134,7 @@ def render_exam_summary(df):
     ]
 
     if not missing_marks.empty:
+
         st.error(
             f"🚫 {len(missing_marks)} completed exams have NO MARKS"
         )
@@ -128,7 +143,7 @@ def render_exam_summary(df):
 
 
 # =========================
-# 📊 EXAM TAB UI
+# 📊 MAIN EXAM TAB
 # =========================
 def render_exam_tab(
     df,
@@ -138,13 +153,14 @@ def render_exam_tab(
 ):
 
     if df is None or df.empty:
+
         st.info("No exam data found.")
         return
 
     df = df.copy()
 
     # -------------------------
-    # COLUMN MAPPING
+    # COLUMN MAP
     # -------------------------
     col_student = get_col(df, "StudentID")
     col_teacher = get_col(df, "TeacherID")
@@ -160,12 +176,15 @@ def render_exam_tab(
     # -------------------------
     # CREATE MISSING COLUMNS
     # -------------------------
-    for c in [
+    required_cols = [
         "Exam Status",
         "Exam Schedule",
         "Score",
         "Max Score"
-    ]:
+    ]
+
+    for c in required_cols:
+
         if get_col(df, c) is None:
             df[c] = ""
 
@@ -176,7 +195,7 @@ def render_exam_tab(
     col_max = get_col(df, "Max Score")
 
     # -------------------------
-    # FILTER TEACHER
+    # FILTER BY TEACHER
     # -------------------------
     if col_teacher:
 
@@ -194,6 +213,7 @@ def render_exam_tab(
         ]
 
     if df.empty:
+
         st.info("No exam data for your profile.")
         return
 
@@ -203,7 +223,7 @@ def render_exam_tab(
     df = df.reset_index()
 
     # -------------------------
-    # BUILD TABLE
+    # TABLE DATA
     # -------------------------
     edit_df = pd.DataFrame({
         "index": df["index"],
@@ -242,7 +262,7 @@ def render_exam_tab(
     })
 
     # -------------------------
-    # DEFAULT VALUE
+    # DEFAULT STATUS
     # -------------------------
     edit_df["Exam Status"] = (
         edit_df["Exam Status"]
@@ -252,7 +272,7 @@ def render_exam_tab(
     )
 
     # -------------------------
-    # DATE FORMAT
+    # DATE CONVERSION
     # -------------------------
     edit_df["Exam Schedule"] = pd.to_datetime(
         edit_df["Exam Schedule"],
@@ -261,33 +281,38 @@ def render_exam_tab(
     )
 
     # -------------------------
-    # 🔥 SUMMARY SECTION
+    # SUMMARY
     # -------------------------
     render_exam_summary(edit_df)
 
     # -------------------------
-    # INLINE EDITOR
+    # DATA EDITOR
     # -------------------------
     edited = st.data_editor(
         edit_df,
+
         use_container_width=True,
+
         hide_index=True,
 
         column_config={
 
-            "index": st.column_config.NumberColumn(
-                disabled=True
-            ),
+            "index":
+                st.column_config.NumberColumn(
+                    disabled=True
+                ),
 
             "Exam Status":
                 st.column_config.SelectboxColumn(
                     "Exam Status",
+
                     options=[
                         "Not Scheduled",
                         "Completed",
                         "Schedule",
                         "Chapter Not Completed"
                     ],
+
                     required=True
                 ),
 
@@ -340,10 +365,11 @@ def render_exam_tab(
                 )
 
             else:
+
                 schedule_str = ""
 
             # -------------------------
-            # 🧠 LOGIC
+            # VALIDATION
             # -------------------------
             if status == "Completed":
 
@@ -367,10 +393,10 @@ def render_exam_tab(
 
             elif status == "Schedule":
 
-                if not schedule_str:
+                if schedule_str == "":
 
                     st.warning(
-                        f"Select date for row {sheet_row}"
+                        f"Select exam date for row {sheet_row}"
                     )
 
                     return
@@ -400,12 +426,13 @@ def render_exam_tab(
             })
 
         # -------------------------
-        # 🚀 BATCH UPDATE
+        # SAVE TO SHEET
         # -------------------------
         if updates:
 
             creds = Credentials.from_service_account_info(
                 load_credentials(),
+
                 scopes=[
                     "https://www.googleapis.com/auth/spreadsheets",
                     "https://www.googleapis.com/auth/drive"
