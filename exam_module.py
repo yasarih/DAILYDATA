@@ -9,10 +9,13 @@ from google.oauth2.service_account import Credentials
 # =========================
 def get_col(df, name):
     name = name.lower().replace(" ", "").replace(".", "")
+
     for col in df.columns:
-        clean = col.lower().replace(" ", "").replace(".", "")
+        clean = str(col).lower().replace(" ", "").replace(".", "")
+
         if clean == name:
             return col
+
     return None
 
 
@@ -26,10 +29,19 @@ def render_exam_summary(df):
 
     df = df.copy()
 
-    df["Exam Status"] = df["Exam Status"].replace("", "Not Scheduled")
+    # fill empty status
+    df["Exam Status"] = (
+        df["Exam Status"]
+        .fillna("")
+        .astype(str)
+        .replace("", "Not Scheduled")
+    )
 
+    # date conversion
     df["Exam Schedule"] = pd.to_datetime(
-        df["Exam Schedule"], errors="coerce", dayfirst=True
+        df["Exam Schedule"],
+        errors="coerce",
+        dayfirst=True
     )
 
     today = pd.to_datetime("today").normalize()
@@ -38,10 +50,18 @@ def render_exam_summary(df):
     # 📊 COUNTS
     # -------------------------
     total = len(df)
+
     completed = (df["Exam Status"] == "Completed").sum()
+
     scheduled = (df["Exam Status"] == "Schedule").sum()
-    not_completed = (df["Exam Status"] == "Chapter Not Completed").sum()
-    not_scheduled = (df["Exam Status"] == "Not Scheduled").sum()
+
+    not_completed = (
+        df["Exam Status"] == "Chapter Not Completed"
+    ).sum()
+
+    not_scheduled = (
+        df["Exam Status"] == "Not Scheduled"
+    ).sum()
 
     # -------------------------
     # 🎯 METRICS
@@ -60,34 +80,49 @@ def render_exam_summary(df):
     # ⚠️ WARNINGS
     # -------------------------
 
-    # 1️⃣ Not Scheduled
-    missing_status = df[df["Exam Status"] == "Not Scheduled"]
-    if not missing_status.empty:
-        st.warning(f"⚠️ {len(missing_status)} exams are NOT SCHEDULED")
+    # NOT SCHEDULED
+    missing_status = df[
+        df["Exam Status"] == "Not Scheduled"
+    ]
 
-    # 2️⃣ Overdue Exams
+    if not missing_status.empty:
+        st.warning(
+            f"⚠️ {len(missing_status)} exams are NOT SCHEDULED"
+        )
+
+    # OVERDUE
     overdue = df[
-        (df["Exam Status"] == "Schedule") &
-        (df["Exam Schedule"].notna()) &
+        (df["Exam Status"] == "Schedule")
+        &
+        (df["Exam Schedule"].notna())
+        &
         (df["Exam Schedule"] < today)
     ]
 
     if not overdue.empty:
-        st.error(f"⏰ {len(overdue)} exams are OVERDUE — mark completed & enter marks")
+        st.error(
+            f"⏰ {len(overdue)} exams are OVERDUE — mark completed & enter marks"
+        )
 
-    # 3️⃣ Completed but No Marks
+    # COMPLETED BUT NO MARKS
     missing_marks = df[
-        (df["Exam Status"] == "Completed") &
+        (df["Exam Status"] == "Completed")
+        &
         (
-            (df["Score"] == "") |
-            (df["Max Score"] == "") |
-            (df["Score"].isna()) |
+            (df["Score"] == "")
+            |
+            (df["Max Score"] == "")
+            |
+            (df["Score"].isna())
+            |
             (df["Max Score"].isna())
         )
     ]
 
     if not missing_marks.empty:
-        st.error(f"🚫 {len(missing_marks)} completed exams have NO MARKS")
+        st.error(
+            f"🚫 {len(missing_marks)} completed exams have NO MARKS"
+        )
 
     st.divider()
 
@@ -95,11 +130,18 @@ def render_exam_summary(df):
 # =========================
 # 📊 EXAM TAB UI
 # =========================
-def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
+def render_exam_tab(
+    df,
+    teacher_id,
+    sheet_id,
+    load_credentials
+):
 
     if df is None or df.empty:
         st.info("No exam data found.")
         return
+
+    df = df.copy()
 
     # -------------------------
     # COLUMN MAPPING
@@ -118,7 +160,12 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     # -------------------------
     # CREATE MISSING COLUMNS
     # -------------------------
-    for c in ["Exam Status", "Exam Schedule", "Score", "Max Score"]:
+    for c in [
+        "Exam Status",
+        "Exam Schedule",
+        "Score",
+        "Max Score"
+    ]:
         if get_col(df, c) is None:
             df[c] = ""
 
@@ -132,13 +179,27 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     # FILTER TEACHER
     # -------------------------
     if col_teacher:
-        df[col_teacher] = df[col_teacher].astype(str).str.lower().str.strip()
-        df = df[df[col_teacher] == teacher_id]
+
+        df[col_teacher] = (
+            df[col_teacher]
+            .astype(str)
+            .str.lower()
+            .str.strip()
+        )
+
+        teacher_id = str(teacher_id).lower().strip()
+
+        df = df[
+            df[col_teacher] == teacher_id
+        ]
 
     if df.empty:
         st.info("No exam data for your profile.")
         return
 
+    # -------------------------
+    # RESET INDEX
+    # -------------------------
     df = df.reset_index()
 
     # -------------------------
@@ -146,27 +207,57 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     # -------------------------
     edit_df = pd.DataFrame({
         "index": df["index"],
-        "Date": df[col_date] if col_date else ""
-        "Student ID": df[col_student] if col_student else "",
-        "Student Name": df[col_name] if col_name else "",
-        "Subject": df[col_subject] if col_subject else "",
-        "Chapter": df[col_chapter] if col_chapter else "",
-        "Exam Status": df[col_status],
-        "Exam Schedule": df[col_schedule],
-        "Score": df[col_score],
-        "Max Score": df[col_max]
+
+        "Date":
+            df[col_date]
+            if col_date else "",
+
+        "Student ID":
+            df[col_student]
+            if col_student else "",
+
+        "Student Name":
+            df[col_name]
+            if col_name else "",
+
+        "Subject":
+            df[col_subject]
+            if col_subject else "",
+
+        "Chapter":
+            df[col_chapter]
+            if col_chapter else "",
+
+        "Exam Status":
+            df[col_status],
+
+        "Exam Schedule":
+            df[col_schedule],
+
+        "Score":
+            df[col_score],
+
+        "Max Score":
+            df[col_max]
     })
 
     # -------------------------
     # DEFAULT VALUE
     # -------------------------
-    edit_df["Exam Status"] = edit_df["Exam Status"].replace("", "Not Scheduled")
+    edit_df["Exam Status"] = (
+        edit_df["Exam Status"]
+        .fillna("")
+        .astype(str)
+        .replace("", "Not Scheduled")
+    )
 
     # -------------------------
     # DATE FORMAT
     # -------------------------
     edit_df["Exam Schedule"] = pd.to_datetime(
-        edit_df["Exam Schedule"], errors="coerce", dayfirst=True
+        edit_df["Exam Schedule"],
+        errors="coerce",
+        dayfirst=True
     )
 
     # -------------------------
@@ -180,18 +271,41 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     edited = st.data_editor(
         edit_df,
         use_container_width=True,
+        hide_index=True,
+
         column_config={
-            "Exam Status": st.column_config.SelectboxColumn(
-                "Exam Status",
-                options=["Not Scheduled", "Completed", "Schedule", "Chapter Not Completed"],
-                required=True
+
+            "index": st.column_config.NumberColumn(
+                disabled=True
             ),
-            "Exam Schedule": st.column_config.DateColumn(
-                "Exam Schedule",
-                format="DD/MM/YYYY"
-            ),
-            "Score": st.column_config.NumberColumn(min_value=0),
-            "Max Score": st.column_config.NumberColumn(min_value=1)
+
+            "Exam Status":
+                st.column_config.SelectboxColumn(
+                    "Exam Status",
+                    options=[
+                        "Not Scheduled",
+                        "Completed",
+                        "Schedule",
+                        "Chapter Not Completed"
+                    ],
+                    required=True
+                ),
+
+            "Exam Schedule":
+                st.column_config.DateColumn(
+                    "Exam Schedule",
+                    format="DD/MM/YYYY"
+                ),
+
+            "Score":
+                st.column_config.NumberColumn(
+                    min_value=0
+                ),
+
+            "Max Score":
+                st.column_config.NumberColumn(
+                    min_value=1
+                )
         }
     )
 
@@ -201,7 +315,10 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     if st.button("💾 Save Exam Updates"):
 
         updates = []
-        today = pd.to_datetime("today").normalize()
+
+        today = pd.to_datetime(
+            "today"
+        ).normalize()
 
         for _, row in edited.iterrows():
 
@@ -212,9 +329,16 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
             score = row["Score"]
             max_score = row["Max Score"]
 
-            # format date
+            # -------------------------
+            # FORMAT DATE
+            # -------------------------
             if pd.notna(schedule):
-                schedule_str = pd.to_datetime(schedule).strftime("%d/%m/%Y")
+
+                schedule_str = (
+                    pd.to_datetime(schedule)
+                    .strftime("%d/%m/%Y")
+                )
+
             else:
                 schedule_str = ""
 
@@ -222,34 +346,64 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
             # 🧠 LOGIC
             # -------------------------
             if status == "Completed":
-                if schedule and pd.to_datetime(schedule) <= today:
-                    if pd.isna(score) or pd.isna(max_score):
-                        st.warning(f"Enter marks for row {sheet_row}")
+
+                if (
+                    pd.notna(schedule)
+                    and
+                    pd.to_datetime(schedule) <= today
+                ):
+
+                    if (
+                        pd.isna(score)
+                        or
+                        pd.isna(max_score)
+                    ):
+
+                        st.warning(
+                            f"Enter marks for row {sheet_row}"
+                        )
+
                         return
 
             elif status == "Schedule":
+
                 if not schedule_str:
-                    st.warning(f"Select date for row {sheet_row}")
+
+                    st.warning(
+                        f"Select date for row {sheet_row}"
+                    )
+
                     return
 
             elif status == "Chapter Not Completed":
+
                 score = ""
                 max_score = ""
 
             elif status == "Not Scheduled":
+
                 schedule_str = ""
                 score = ""
                 max_score = ""
 
+            # -------------------------
+            # UPDATE PAYLOAD
+            # -------------------------
             updates.append({
                 "range": f"E{sheet_row}:H{sheet_row}",
-                "values": [[status, schedule_str, score, max_score]]
+                "values": [[
+                    status,
+                    schedule_str,
+                    score,
+                    max_score
+                ]]
             })
 
         # -------------------------
         # 🚀 BATCH UPDATE
         # -------------------------
         if updates:
+
             creds = Credentials.from_service_account_info(
                 load_credentials(),
                 scopes=[
@@ -257,10 +411,17 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
                     "https://www.googleapis.com/auth/drive"
                 ]
             )
+
             client = gspread.authorize(creds)
-            ws = client.open_by_key(sheet_id).worksheet("ExamDetails")
+
+            ws = (
+                client
+                .open_by_key(sheet_id)
+                .worksheet("ExamDetails")
+            )
 
             ws.batch_update(updates)
 
             st.success("✅ Updated successfully")
+
             st.rerun()
