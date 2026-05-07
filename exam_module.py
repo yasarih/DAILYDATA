@@ -113,6 +113,7 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     col_score = get_col(df, "Score")
     col_max = get_col(df, "Max Score")
     col_name = get_col(df, "StudentName")
+    col_date = get_col(df, "Date")
 
     # -------------------------
     # CREATE MISSING COLUMNS
@@ -145,6 +146,7 @@ def render_exam_tab(df, teacher_id, sheet_id, load_credentials):
     # -------------------------
     edit_df = pd.DataFrame({
         "index": df["index"],
+        "Date": df[col_date] if col_date else ""
         "Student ID": df[col_student] if col_student else "",
         "Student Name": df[col_name] if col_name else "",
         "Subject": df[col_subject] if col_subject else "",
