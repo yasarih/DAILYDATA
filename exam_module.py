@@ -416,7 +416,7 @@ def render_exam_tab(
             # UPDATE PAYLOAD
             # -------------------------
             updates.append({
-                "range": f"E{sheet_row}:H{sheet_row}",
+                "range": f"F{sheet_row}:I{sheet_row}",
                 "values": [[
                     status,
                     schedule_str,
