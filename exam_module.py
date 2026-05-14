@@ -337,10 +337,6 @@ def render_exam_tab(
 
         updates = []
 
-        today = pd.to_datetime(
-            "today"
-        ).normalize()
-
         for _, row in edited.iterrows():
 
             sheet_row = int(row["index"]) + 2
@@ -463,8 +459,4 @@ def render_exam_tab(
 
             st.success("✅ Updated successfully")
 
-<<<<<<< HEAD
             st.rerun()
-=======
-            st.rerun()
->>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
