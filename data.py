@@ -52,7 +52,7 @@ def fetch_data(sheet_id, worksheet):
         st.error(f"Error loading sheet: {e}")
         return pd.DataFrame()
 
-<<<<<<< HEAD
+#<<<<<<< HEAD
 @st.cache_data(show_spinner=True, ttl=3600)
 def merge_teacher_student(main_df, student_df):
 
@@ -111,7 +111,7 @@ def merge_teacher_student(main_df, student_df):
         return merged
     except Exception as e:
         st.error(f"Error during merging: {e}")
->>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
+#>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
         return main_df
 
     # -------------------------
@@ -302,7 +302,7 @@ def main():
     profile_df = fetch_data(sheet_id, "Profile")
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
     demoBonus_df = fetch_data(sheet_id, "DemoBonus")
-<<<<<<< HEAD
+#<<<<<<< HEAD
     timetable_df = fetch_data(sheet_id, "TimeTable")
 =======
 >>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
@@ -404,7 +404,7 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
-<<<<<<< HEAD
+#<<<<<<< HEAD
         tab5, tab1, tab2, tab3, tab4,tab6 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion","🗓️ Time Table"  ])
 =======
         tab5, tab1, tab2, tab3, tab4 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion"  ])
@@ -468,7 +468,7 @@ def main():
                 st.dataframe(highlight_duplicates(summary), use_container_width=True)
                 st.download_button("📥 Download Summary", data=to_csv_download(summary),
                                    file_name=f"{st.session_state.get('teacher_name','teacher')}_summary.csv", mime="text/csv")
-<<<<<<< HEAD
+#<<<<<<< HEAD
 =======
 
                 st.write("## ⏱️ Consolidated Class Hours")
@@ -492,7 +492,7 @@ def main():
         with tab3:
 
             st.subheader("👥 Assigned Students & EM Info")
-<<<<<<< HEAD
+#<<<<<<< HEAD
 
             merged_data = st.session_state.get(
                 'merged_data',
@@ -648,7 +648,7 @@ def main():
                 sheet_id,
                 load_credentials
             )
-<<<<<<< HEAD
+#<<<<<<< HEAD
         
 
         with tab6:
@@ -799,7 +799,7 @@ if __name__ == "__main__":
     main()
 
 
-<<<<<<< HEAD
+#<<<<<<< HEAD
 =======
 
 >>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
