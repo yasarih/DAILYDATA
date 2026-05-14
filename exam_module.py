@@ -423,7 +423,7 @@ def render_exam_tab(
             updates.append({
 
                 "range":
-                    f"E{sheet_row}:H{sheet_row}",
+                    f"F{sheet_row}:I{sheet_row}",
 
                 "values":
                     [[
