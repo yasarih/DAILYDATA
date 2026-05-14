@@ -3,6 +3,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import numpy as np
+from exam_module import render_exam_tab
+
 
 st.set_page_config(page_title="Angle Belearn Insights", page_icon="🎓", layout="wide")
 
@@ -32,7 +34,7 @@ def fetch_data(sheet_id, worksheet):
         if not data:
             return pd.DataFrame()
 
-        headers = pd.Series(data[0]).fillna('').str.strip()
+        headers = pd.Series(data[0]).fillna('').astype(str).str.strip()
         headers = headers.where(headers != '', other='Unnamed')
         headers = headers + headers.groupby(headers).cumcount().astype(str).replace('0', '')
         df = pd.DataFrame(data[1:], columns=headers)
@@ -40,6 +42,7 @@ def fetch_data(sheet_id, worksheet):
         df.replace('', np.nan, inplace=True)
         df.fillna('', inplace=True)
 
+        # normalize an Hr column if present
         if 'Hr' in df.columns:
             df['Hr'] = pd.to_numeric(df['Hr'], errors='coerce').fillna(0)
 
@@ -49,21 +52,76 @@ def fetch_data(sheet_id, worksheet):
         st.error(f"Error loading sheet: {e}")
         return pd.DataFrame()
 
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner=True, ttl=3600)
 def merge_teacher_student(main_df, student_df):
+
+    if main_df is None or student_df is None:
+        return pd.DataFrame()
+
     if main_df.empty or student_df.empty:
         return pd.DataFrame()
-    
-    main_df = main_df.rename(columns={'Student id': 'Student ID'})
-    student_df = student_df.rename(columns={'Student id': 'Student ID', 'EM': 'EM', 'EM Phone': 'Phone Number'})
-    try:
-        merged = main_df.merge(student_df[['Student ID', 'EM', 'Phone Number']], on='Student ID', how='left')
-        return merged
-    except Exception as e:
-        st.error(f"Error during merging: {e}")
+
+    main_df = main_df.copy()
+    student_df = student_df.copy()
+
+    # -------------------------
+    # FIX COLUMN NAMES
+    # -------------------------
+    if 'Student id' in main_df.columns and 'Student ID' not in main_df.columns:
+        main_df = main_df.rename(columns={'Student id': 'Student ID'})
+
+    if 'Student id' in student_df.columns and 'Student ID' not in student_df.columns:
+        student_df = student_df.rename(columns={'Student id': 'Student ID'})
+
+    # -------------------------
+    # CHECK STUDENT ID
+    # -------------------------
+    if 'Student ID' not in student_df.columns:
         return main_df
 
+    # -------------------------
+    # MERGE COLUMNS
+    # -------------------------
+    merge_cols = ['Student ID']
+
+    if 'EM' in student_df.columns:
+        merge_cols.append('EM')
+
+    # rename EM Phone
+    if 'EM Phone' in student_df.columns and 'Phone Number' not in student_df.columns:
+        student_df = student_df.rename(columns={
+            'EM Phone': 'Phone Number'
+        })
+
+    if 'Phone Number' in student_df.columns:
+        merge_cols.append('Phone Number')
+
+    # ✅ ADD LINK COLUMN
+    if 'Link' in student_df.columns:
+        merge_cols.append('Link')
+
+    # -------------------------
+    # MERGE
+    # -------------------------
+    try:
+
+        merged = main_df.merge(
+            student_df[merge_cols],
+            on='Student ID',
+            how='left'
+        )
+
+        return merged
+
+    except Exception as e:
+
+        st.error(f"Error during merging: {e}")
+
+        return main_df
 def highlight_duplicates(df):
+    # Accepts a DataFrame and returns a Styler highlighting duplicates on Date+Student ID
+    if df is None or df.empty:
+        return df
     dupes = df[df.duplicated(subset=["Date", "Student ID"], keep=False)]
     return df.style.apply(
         lambda row: ['background-color: lightcoral' if row.name in dupes.index else '' for _ in row],
@@ -74,14 +132,96 @@ def to_csv_download(df, filename="teacher_log.csv"):
     return df.to_csv(index=False).encode("utf-8")
 
 def get_teacher_profile(teacher_id, profile_df):
-    profile_df['Teacher id'] = profile_df['Teacher id'].str.strip().str.lower()
-    profile_row = profile_df[profile_df['Teacher id'] == teacher_id]
-    return profile_row
+    if profile_df is None or profile_df.empty:
+        return pd.DataFrame()
+    df = profile_df.copy()
+    # case-insensitive match for teacher id
+    id_col = next((c for c in df.columns if c.strip().lower() == 'teacher id' or c.strip().lower() == 'teacher id'), None)
+    if id_col is None:
+        # try variants
+        id_col = next((c for c in df.columns if 'teacher' in c.lower() and 'id' in c.lower()), None)
+    if id_col is None:
+        return pd.DataFrame()
+    df[id_col] = df[id_col].astype(str).str.strip().str.lower()
+    return df[df[id_col] == teacher_id]
+
+def get_teacher_demobonus(teacher_id, demoBonus_df):
+    if demoBonus_df is None or demoBonus_df.empty:
+        return pd.DataFrame()
+    df = demoBonus_df.copy()
+    id_col = next((c for c in df.columns if c.strip().lower() == 'teacher id'), None)
+    if id_col is None:
+        id_col = next((c for c in df.columns if 'teacher' in c.lower() and 'id' in c.lower()), None)
+    if id_col is None:
+        return pd.DataFrame()
+    df[id_col] = df[id_col].astype(str).str.strip().str.lower()
+    return df[df[id_col] == teacher_id]
+
+def filter_overlimit_for_teacher(overlimit_df: pd.DataFrame, teacher_id_norm: str) -> pd.DataFrame:
+    # work on a copy
+    if overlimit_df is None or overlimit_df.empty:
+        return pd.DataFrame()
+
+    df = overlimit_df.copy()
+
+    # find teacher column case-insensitively
+    teacher_col = next((c for c in df.columns if c.strip().lower() == 'teacher id' or ( 'teacher' in c.lower() and 'id' in c.lower() )), None)
+
+    # normalize and filter if that column exists
+    if teacher_col is not None:
+        df[teacher_col] = df[teacher_col].astype(str).str.strip().str.lower()
+        df = df[df[teacher_col] == teacher_id_norm]
+
+    # select only the columns we want to show to the user (exclude Teacher ID)
+    cols = ['EM', 'Student ID', 'Student', 'Chapter Taken', 'Hours Taken', 'Max. Hours Alloted']
+    existing = [c for c in cols if c in df.columns]
+    if not existing:
+        return pd.DataFrame()  # nothing to show
+    filtered = df.loc[:, existing].copy()
+
+    # make numeric (coerce invalid -> NaN)
+    if 'Hours Taken' in filtered.columns:
+        filtered['Hours Taken'] = pd.to_numeric(filtered['Hours Taken'], errors='coerce')
+    if 'Max. Hours Alloted' in filtered.columns:
+        filtered['Max. Hours Alloted'] = pd.to_numeric(filtered['Max. Hours Alloted'], errors='coerce')
+
+    # compute difference (keep as float so partial hours are preserved)
+    # only compute for columns that exist
+    if 'Hours Taken' in filtered.columns and 'Max. Hours Alloted' in filtered.columns:
+        filtered['Difference'] = filtered['Hours Taken'].sub(filtered['Max. Hours Alloted'])
+    else:
+        # if one of the columns is missing, create Difference as NaN or as HoursTaken if only that exists
+        if 'Hours Taken' in filtered.columns:
+            filtered['Difference'] = filtered['Hours Taken']
+        else:
+            filtered['Difference'] = np.nan
+
+    return filtered
+
+def get_exam_data(teacher_id, examlist_df):
+    if examlist_df is None or examlist_df.empty:
+        return pd.DataFrame()
+    df = examlist_df.copy()
+    teacher_col = next((c for c in df.columns if c.strip().lower() == 'teacher id'), None)
+    if teacher_col is not None:
+        df[teacher_col] = df[teacher_col].astype(str).str.strip().str.lower()
+        df = df[df[teacher_col] == teacher_id]
+    cols = ['Student ID', 'Name', 'SubJect', 'Chapter name', 'EM']
+    existing = [c for c in cols if c in df.columns]
+    if not existing:
+        return pd.DataFrame()
+    return df.loc[:, existing].copy()
 
 def get_supaleran_demofit(teacher_id, supa_demofit_df):
-    supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].astype(str).str.strip().str.lower()
+    if supa_demofit_df is None or supa_demofit_df.empty:
+        return None, None
+    df = supa_demofit_df.copy()
+    id_col = next((c for c in df.columns if c.strip().lower() == 'teacher id'), None)
+    if id_col is None:
+        return None, None
+    df[id_col] = df[id_col].astype(str).str.strip().str.lower()
     teacher_id = str(teacher_id).strip().lower()
-    row = supa_demofit_df[supa_demofit_df['Teacher id'] == teacher_id]
+    row = df[df[id_col] == teacher_id]
     if not row.empty:
         supalearn_id = row['SupalearnID'].iloc[0] if 'SupalearnID' in row.columns else None
         demofit = row['DemoFit'].iloc[0] if 'DemoFit' in row.columns else None
@@ -90,13 +230,19 @@ def get_supaleran_demofit(teacher_id, supa_demofit_df):
         return None, None
 
 def get_teacher_details(teacher_id, supa_demofit_df):
-    supa_demofit_df['Teacher id'] = supa_demofit_df['Teacher id'].str.strip().str.lower()
-    teacher_id = teacher_id.strip().lower()
-    row = supa_demofit_df[supa_demofit_df['Teacher id'] == teacher_id]
+    if supa_demofit_df is None or supa_demofit_df.empty:
+        return None, None, None
+    df = supa_demofit_df.copy()
+    id_col = next((c for c in df.columns if c.strip().lower() == 'teacher id'), None)
+    if id_col is None:
+        return None, None, None
+    df[id_col] = df[id_col].str.strip().str.lower()
+    tid = teacher_id.strip().lower()
+    row = df[df[id_col] == tid]
     if not row.empty:
-        teacher_name = row.iloc[0]['Teacher Name']
-        supalearn_id = row.iloc[0]['SupalearnID']
-        demofit = row.iloc[0]['DemoFit']
+        teacher_name = row.iloc[0].get('Teacher Name', None)
+        supalearn_id = row.iloc[0].get('SupalearnID', None)
+        demofit = row.iloc[0].get('DemoFit', None)
         return teacher_name, supalearn_id, demofit
     else:
         return None, None, None
@@ -104,37 +250,51 @@ def get_teacher_details(teacher_id, supa_demofit_df):
 def main():
     st.image("https://anglebelearn.kayool.com/assets/logo/angle_170x50.png", width=250)
     st.title("Angle Belearn - Teacher Dashboard")
+    st.info(
+    "🕒 Data in this dashboard updates **once every hour**. "
+    "This is not live data."
+)
+
 
     if st.sidebar.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
     sheet_id = "1v3vnUaTrKpbozrE1sZ7K5a-HtEttOPjMQDt4Z_Fivb4"
+    sheet_id2 = "1Edkaa-mlW1Huc6ereT8vu6ZNlusInc998zLHrJYDswk"
     class_df = fetch_data(sheet_id, "Student class details")
     student_df = fetch_data(sheet_id, "Student Data")
     profile_df = fetch_data(sheet_id, "Profile")
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
+    demoBonus_df = fetch_data(sheet_id, "DemoBonus")
+    timetable_df = fetch_data(sheet_id, "TimeTable")
+    
+    examlist_df = fetch_data(sheet_id2, "ExamList")
 
     st.subheader("🔐 Login")
-    teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
+    input_teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
     teacher_pass = st.text_input("Enter last 4 digits of your phone number")
-    month = st.selectbox("Pick Month", list(range(8, 13)))
+    month = st.selectbox("Pick Month", list(range(1, 13)))
     month_str = f"{month:02}"
 
     if st.button("Login"):
-        if class_df.empty:
+        if class_df is None or class_df.empty:
             st.error("Class data not available.")
             return
 
         df = class_df.copy()
-        df['Teachers ID'] = df['Teachers ID'].str.strip().str.lower()
-        df['Password'] = df['Password'].astype(str).str.strip()
-        df['MM'] = df['MM'].astype(str).str.zfill(2)
+        # normalize relevant columns if present
+        if 'Teachers ID' in df.columns:
+            df['Teachers ID'] = df['Teachers ID'].astype(str).str.strip().str.lower()
+        if 'Password' in df.columns:
+            df['Password'] = df['Password'].astype(str).str.strip()
+        if 'MM' in df.columns:
+            df['MM'] = df['MM'].astype(str).str.zfill(2)
 
         filtered = df[
-            (df['Teachers ID'] == teacher_id) &
-            (df['Password'] == teacher_pass) &
-            (df['MM'] == month_str)
+            (df.get('Teachers ID', '') == input_teacher_id) &
+            (df.get('Password', '') == teacher_pass) &
+            (df.get('MM', '') == month_str)
         ]
 
         if filtered.empty:
@@ -142,31 +302,44 @@ def main():
             return
 
         # Save to session_state
-        st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title()
-        st.session_state.teacher_id = teacher_id
-        st.session_state.filtered_data = filtered
-        st.session_state.merged_data = merge_teacher_student(filtered, student_df)
-        st.session_state.profile_data = get_teacher_profile(teacher_id, profile_df)
+        st.session_state.teacher_name = filtered['Teachers Name'].iloc[0].title() if 'Teachers Name' in filtered.columns else input_teacher_id.title()
+        st.session_state.teacher_id = input_teacher_id
+        st.session_state.filtered_data = filtered.reset_index(drop=True)
+        st.session_state.merged_data = merge_teacher_student(st.session_state.filtered_data, student_df)
+        st.session_state.profile_data = get_teacher_profile(input_teacher_id, profile_df)
 
         # Supalearn + DemoFit
-        supalearn_id, demofit = get_supaleran_demofit(teacher_id, supa_demofit_df)
+        supalearn_id, demofit = get_supaleran_demofit(input_teacher_id, supa_demofit_df)
         st.session_state.supalearn_id = supalearn_id
         st.session_state.demofit = demofit
+        # store demo bonus
+        st.session_state.demobonus = get_teacher_demobonus(input_teacher_id, demoBonus_df)
+
         st.rerun()
 
     # After successful login
     if "teacher_name" in st.session_state:
         st.success(f"Welcome, {st.session_state.teacher_name}! 🎉")
-        st.info(f"**Supalearn ID:** {st.session_state.supalearn_id if st.session_state.supalearn_id else 'Not Found'}")
-        st.info(f"**Class Quality:** {st.session_state.demofit if st.session_state.demofit else 'Not Found'}")
+        st.info(f"**Supalearn ID:** {st.session_state.get('supalearn_id', 'Not Found')}")
+        st.info(f"**Class Quality:** {st.session_state.get('demofit', 'Not Found')}")
 
-        # Filter ForSupalearnID data for current teacher
-        qual_df = supa_demofit_df.copy()
+        # get normalized teacher id for filters
+        teacher_id_norm = st.session_state.get('teacher_id', '').strip().lower()
+
+        # Filter ForSupalearnID data for current teacher (safe)
+        qual_df = supa_demofit_df.copy() if supa_demofit_df is not None else pd.DataFrame()
         qual_df.columns = qual_df.columns.str.strip()
-
-        teacher_id = st.session_state.teacher_id.strip().lower()
-        qual_df['Teacher id'] = qual_df['Teacher id'].astype(str).str.strip().str.lower()
-        qual_df_filtered = qual_df[qual_df['Teacher id'] == teacher_id]
+        if 'Teacher id' in qual_df.columns:
+            qual_df['Teacher id'] = qual_df['Teacher id'].astype(str).str.strip().str.lower()
+            qual_df_filtered = qual_df[qual_df['Teacher id'] == teacher_id_norm]
+        else:
+            # try alternative casing
+            teacher_col = next((c for c in qual_df.columns if 'teacher' in c.lower() and 'id' in c.lower()), None)
+            if teacher_col:
+                qual_df[teacher_col] = qual_df[teacher_col].astype(str).str.strip().str.lower()
+                qual_df_filtered = qual_df[qual_df[teacher_col] == teacher_id_norm]
+            else:
+                qual_df_filtered = pd.DataFrame()
 
         class_quality_cols = [
             "Punctuality",
@@ -182,7 +355,7 @@ def main():
         ]
 
         missing_cols = [col for col in class_quality_cols if col not in qual_df_filtered.columns]
-        if missing_cols:
+        if missing_cols and not qual_df_filtered.empty:
             st.warning(f"Missing columns in ForSupalearnID data: {missing_cols}")
 
         display_cols = [col for col in class_quality_cols if col in qual_df_filtered.columns]
@@ -193,53 +366,365 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
-        tab1, tab2, tab3 = st.tabs(["👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details"])
+        tab5, tab1, tab2, tab3, tab4,tab6 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion","🗓️ Time Table"  ])
 
         with tab1:
             st.subheader("👩‍🏫 Teacher Profile")
-            profile_data = st.session_state.profile_data
-            if not profile_data.empty:
-                st.write(f"**Phone:** {profile_data['Phone number'].values[0]}")
-                st.write(f"**Email:** {profile_data['Mail. id'].values[0]}")
-                st.write(f"**Qualification:** {profile_data['Qualification'].values[0]}")
-                st.write(f"**Available Slots:** {profile_data['Available Slots'].values[0]}")
+            profile_data = st.session_state.get('profile_data', pd.DataFrame())
+            if profile_data is not None and not profile_data.empty:
+                # safe extraction with .get or checking column presence
+                def show_col(df, col, label=None):
+                    if col in df.columns:
+                        st.write(f"**{label or col}:** {df[col].values[0]}")
 
-                lang_col = 'Language preferred  in Class'
-                if lang_col in profile_data.columns:
+                show_col(profile_data, 'Phone number', 'Phone')
+                show_col(profile_data, 'Mail. id', 'Email')
+                show_col(profile_data, 'Qualification')
+                show_col(profile_data, 'Available Slots')
+                lang_col = next((c for c in profile_data.columns if 'language' in c.lower()), None)
+                if lang_col:
                     st.write(f"**Language Preference:** {profile_data[lang_col].values[0]}")
 
                 syllabus_columns = ["IGCSE", "CBSE", "ICSE"]
                 syllabus = [col for col in syllabus_columns if col in profile_data.columns and str(profile_data[col].values[0]).strip().upper() == "YES"]
                 st.write("**Syllabus Expertise:** " + ", ".join(syllabus) if syllabus else "No syllabus marked.")
 
-                subjects = profile_data.iloc[0, 12:35]
-                subjects = subjects[subjects != '']
-                if not subjects.empty:
-                    st.write("**Subjects Handled**")
-                    for subject, level in subjects.items():
-                        st.markdown(f"- **{subject}** : Upto {level}th")
+                # Subjects list: guard against index errors
+                # You originally sliced columns 12:35 — safer to check length
+                if profile_data.shape[1] >= 13:
+                    subjects = profile_data.iloc[0, 12:35]
+                    subjects = subjects[subjects != '']
+                    if not subjects.empty:
+                        st.write("**Subjects Handled**")
+                        for subject, level in subjects.items():
+                            st.markdown(f"- **{subject}** : Upto {level}th")
+                    else:
+                        st.write("No subjects listed.")
                 else:
                     st.write("No subjects listed.")
+
+                # Display demo bonus data (already stored in session)
+                demobonus_data = st.session_state.get('demobonus', pd.DataFrame())
+                st.write("**Your recent demo conversions. ₹300 reward per student converted:**")
+                if demobonus_data is not None and not demobonus_data.empty:
+                    st.dataframe(demobonus_data, use_container_width=True)
+                else:
+                    st.write("No demo bonus data available.")
             else:
                 st.info("No profile data available to show.")
 
         with tab2:
-            st.subheader("📖 Daily Class Log")
-            summary = st.session_state.merged_data[["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]]
-            summary = summary.sort_values(by=["Date", "Student ID"]).reset_index(drop=True)
+            
+            merged_data = st.session_state.get('merged_data', pd.DataFrame())
+            # safe column selection
+            summary_cols = ["Date", "Student ID", "Student", "Class", "Syllabus", "Hr", "Type of class"]
+            available_summary_cols = [c for c in summary_cols if c in merged_data.columns]
+            if merged_data is None or merged_data.empty or not available_summary_cols:
+                st.info("No daily class data available.")
+            else:
+                summary = merged_data[available_summary_cols].sort_values(by=[c for c in ["Date", "Student ID"] if c in available_summary_cols]).reset_index(drop=True)
+                st.dataframe(highlight_duplicates(summary), use_container_width=True)
+                st.download_button("📥 Download Summary", data=to_csv_download(summary),
+                                   file_name=f"{st.session_state.get('teacher_name','teacher')}_summary.csv", mime="text/csv")
 
-            st.dataframe(highlight_duplicates(summary), use_container_width=True)
-            st.download_button("📥 Download Summary", data=to_csv_download(summary),
-                               file_name=f"{st.session_state.teacher_name}_summary.csv", mime="text/csv")
-
-            st.write("## ⏱️ Consolidated Class Hours")
-            grouped = summary.groupby(["Class", "Syllabus", "Type of class"]).agg({"Hr": "sum"}).reset_index()
-            st.dataframe(grouped, use_container_width=True)
-
+                st.write("## ⏱️ Consolidated Class Hours")
+                if 'Hr' in summary.columns:
+                    grouped = summary.groupby([c for c in ["Class", "Syllabus", "Type of class"] if c in summary.columns]).agg({"Hr": "sum"}).reset_index()
+                    total_hours = summary['Hr'].sum()
+                    st.write(f"### 🕒 Total Teaching Hours: {total_hours}")
+                    st.dataframe(grouped, use_container_width=True)
+                else:
+                    st.info("No 'Hr' column found to compute consolidated hours.")
         with tab3:
+
             st.subheader("👥 Assigned Students & EM Info")
-            em_data = st.session_state.merged_data[['Student ID', 'Student', 'EM', 'Phone Number']].drop_duplicates()
-            st.dataframe(em_data.sort_values(by="Student"), use_container_width=True)
+
+            merged_data = st.session_state.get(
+                'merged_data',
+                pd.DataFrame()
+            )
+
+            # -------------------------
+            # REQUIRED COLUMNS
+            # -------------------------
+            cols_for_em = [
+                'Student ID',
+                'Student',
+                'EM',
+                'Phone Number',
+                'Link'
+            ]
+
+            existing = [
+                c for c in cols_for_em
+                if c in merged_data.columns
+            ]
+
+            # -------------------------
+            # NO DATA
+            # -------------------------
+            if merged_data is None or merged_data.empty or not existing:
+
+                st.info("No student/EM data available.")
+
+            else:
+
+                # -------------------------
+                # PREPARE DATA
+                # -------------------------
+                em_data = (
+                    merged_data[existing]
+                    .drop_duplicates()
+                    .copy()
+                )
+
+                # -------------------------
+                # SORT
+                # -------------------------
+                if 'Student' in em_data.columns:
+
+                    em_data = em_data.sort_values(
+                        by="Student"
+                    )
+
+                # -------------------------
+                # FIX LINK FORMAT
+                # -------------------------
+                if 'Link' in em_data.columns:
+
+                    em_data['Link'] = (
+                        em_data['Link']
+                        .astype(str)
+                        .str.strip()
+                    )
+
+                    # add https:// if missing
+                    em_data['Link'] = em_data['Link'].apply(
+
+                        lambda x:
+
+                        (
+                            "https://" + x
+                            if (
+                                x
+                                and
+                                x != "nan"
+                                and
+                                not x.startswith("http")
+                            )
+                            else x
+                        )
+                    )
+
+                # -------------------------
+                # DISPLAY TABLE
+                # -------------------------
+                st.dataframe(
+
+                    em_data,
+
+                    use_container_width=True,
+
+                    hide_index=True,
+
+                    column_config={
+
+                        "Link": st.column_config.LinkColumn(
+
+                            label="Class Link",
+
+                            help="Open Student Link",
+
+                            display_text="Open Link"
+                        )
+                    }
+                )
+
+        with tab4:
+            st.subheader("📋 Salary Calculaion")
+            # use teacher_id_norm computed above
+            
+            st.info("""
+                ### Salary Calculation Rules
+
+                1. **Paid Classes**
+                - Salary = Number of Paid Classes × ₹100
+
+                2. **Classes Below 5th Standard**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹120
+
+                3. **CBSE / State / ICSE (Class 5 – 10)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹150
+
+                4. **CBSE / State / ICSE (Class 11 – 12)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹180
+
+                5. **IGCSE / IB (Class 8 – 10)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹170
+
+                6. **IGCSE / IB (Class 11 – 12)**
+                - Salary = (Total Class Hours − Paid Class Hours) × ₹200
+                    
+                7. **No of Demo Conversions * 300**    
+                """)
+
+
+        with tab5:
+            st.subheader("📋 Exam Details")
+
+            examdetails_df = fetch_data(sheet_id, "ExamDetails")
+
+            render_exam_tab(
+                examdetails_df,
+                teacher_id_norm,
+                sheet_id,
+                load_credentials
+            )
+        
+
+        with tab6:
+
+            st.subheader("🗓️ Weekly Time Table")
+
+            if timetable_df is None or timetable_df.empty:
+
+                st.info("No timetable data found.")
+
+            else:
+
+                tt_df = timetable_df.copy()
+
+                # -------------------------
+                # NORMALIZE tut_id
+                # -------------------------
+                if 'tut_id' not in tt_df.columns:
+
+                    st.error("tut_id column not found.")
+
+                else:
+
+                    tt_df['tut_id'] = (
+                        tt_df['tut_id']
+                        .astype(str)
+                        .str.strip()
+                        .str.lower()
+                    )
+
+                    # -------------------------
+                    # LOGGED IN TEACHER
+                    # -------------------------
+                    teacher_id_norm = (
+                        st.session_state
+                        .get("teacher_id", "")
+                        .strip()
+                        .lower()
+                    )
+
+                    # -------------------------
+                    # FILTER TEACHER
+                    # -------------------------
+                    teacher_tt = tt_df[
+                        tt_df['tut_id']
+                        ==
+                        teacher_id_norm
+                    ].copy()
+
+                    if teacher_tt.empty:
+
+                        st.info("No timetable assigned.")
+
+                    else:
+
+                        # -------------------------
+                        # FORMAT TIME COLUMNS
+                        # -------------------------
+                        for col in ['Time 1', 'Time 2']:
+
+                            if col in teacher_tt.columns:
+
+                                teacher_tt[col] = pd.to_datetime(
+                                    teacher_tt[col],
+                                    errors='coerce'
+                                ).dt.strftime('%I:%M %p')
+
+                        # -------------------------
+                        # RENAME COLUMNS
+                        # -------------------------
+                        teacher_tt = teacher_tt.rename(columns={
+
+                            'Student ID': 'Student ID',
+
+                            'Student Name': 'Student Name',
+
+                            'Subject': 'Subject',
+
+                            'Time 1': 'Class Start Time',
+
+                            'Time 2': 'Class End Time',
+
+                            'Day': 'Day'
+                        })
+
+                        # -------------------------
+                        # FINAL COLUMNS
+                        # -------------------------
+                        final_cols = [
+
+                            'Student ID',
+
+                            'Student Name',
+
+                            'Subject',
+
+                            'Class Start Time',
+
+                            'Class End Time',
+
+                            'Day'
+                        ]
+
+                        existing_cols = [
+
+                            c for c in final_cols
+                            if c in teacher_tt.columns
+                        ]
+
+                        teacher_tt = (
+                            teacher_tt[existing_cols]
+                            .sort_values(
+                                by=['Day', 'Class Start Time']
+                            )
+                            .reset_index(drop=True)
+                        )
+
+                        # -------------------------
+                        # DISPLAY
+                        # -------------------------
+                        st.dataframe(
+
+                            teacher_tt,
+
+                            use_container_width=True,
+
+                            hide_index=True
+                        )
+
+                        # -------------------------
+                        # DOWNLOAD
+                        # -------------------------
+                        st.download_button(
+
+                            "📥 Download Time Table",
+
+                            teacher_tt.to_csv(index=False),
+
+                            file_name="teacher_timetable.csv",
+
+                            mime="text/csv"
+                        )
+
 
 if __name__ == "__main__":
     main()
+
+
