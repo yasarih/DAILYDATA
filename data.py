@@ -52,6 +52,7 @@ def fetch_data(sheet_id, worksheet):
         st.error(f"Error loading sheet: {e}")
         return pd.DataFrame()
 
+<<<<<<< HEAD
 @st.cache_data(show_spinner=True, ttl=3600)
 def merge_teacher_student(main_df, student_df):
 
@@ -77,6 +78,40 @@ def merge_teacher_student(main_df, student_df):
     # CHECK STUDENT ID
     # -------------------------
     if 'Student ID' not in student_df.columns:
+=======
+@st.cache_data(show_spinner=True, ttl=3600)  # ⬅️ 1 hour cache
+def merge_teacher_student(main_df, student_df):
+    if main_df is None or student_df is None or main_df.empty or student_df.empty:
+        return pd.DataFrame()
+    
+    # rename if present (case sensitive in sheet); handle both possibilities
+    main_df = main_df.copy()
+    student_df = student_df.copy()
+
+    if 'Student id' in main_df.columns and 'Student ID' not in main_df.columns:
+        main_df = main_df.rename(columns={'Student id': 'Student ID'})
+    if 'Student id' in student_df.columns and 'Student ID' not in student_df.columns:
+        student_df = student_df.rename(columns={'Student id': 'Student ID'})
+
+    # ensure student_df has at least Student ID column
+    if 'Student ID' not in student_df.columns:
+        return main_df  # can't merge - return original
+
+    # make sure columns exist before merging
+    merge_cols = ['Student ID']
+    if 'EM' in student_df.columns:
+        merge_cols.append('EM')
+    if 'EM Phone' in student_df.columns and 'Phone Number' not in student_df.columns:
+        student_df = student_df.rename(columns={'EM Phone': 'Phone Number'})
+    if 'Phone Number' in student_df.columns:
+        merge_cols.append('Phone Number')
+
+    try:
+        merged = main_df.merge(student_df[merge_cols], on='Student ID', how='left')
+        return merged
+    except Exception as e:
+        st.error(f"Error during merging: {e}")
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
         return main_df
 
     # -------------------------
@@ -267,7 +302,10 @@ def main():
     profile_df = fetch_data(sheet_id, "Profile")
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
     demoBonus_df = fetch_data(sheet_id, "DemoBonus")
+<<<<<<< HEAD
     timetable_df = fetch_data(sheet_id, "TimeTable")
+=======
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
     
     examlist_df = fetch_data(sheet_id2, "ExamList")
 
@@ -366,7 +404,11 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
+<<<<<<< HEAD
         tab5, tab1, tab2, tab3, tab4,tab6 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion","🗓️ Time Table"  ])
+=======
+        tab5, tab1, tab2, tab3, tab4 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion"  ])
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
 
         with tab1:
             st.subheader("👩‍🏫 Teacher Profile")
@@ -426,6 +468,18 @@ def main():
                 st.dataframe(highlight_duplicates(summary), use_container_width=True)
                 st.download_button("📥 Download Summary", data=to_csv_download(summary),
                                    file_name=f"{st.session_state.get('teacher_name','teacher')}_summary.csv", mime="text/csv")
+<<<<<<< HEAD
+=======
+
+                st.write("## ⏱️ Consolidated Class Hours")
+                if 'Hr' in summary.columns:
+                    grouped = summary.groupby([c for c in ["Class", "Syllabus", "Type of class"] if c in summary.columns]).agg({"Hr": "sum"}).reset_index()
+                    total_hours = summary['Hr'].sum()
+                    st.write(f"### 🕒 Total Teaching Hours: {total_hours}")
+                    st.dataframe(grouped, use_container_width=True)
+                else:
+                    st.info("No 'Hr' column found to compute consolidated hours.")
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
 
                 st.write("## ⏱️ Consolidated Class Hours")
                 if 'Hr' in summary.columns:
@@ -438,6 +492,7 @@ def main():
         with tab3:
 
             st.subheader("👥 Assigned Students & EM Info")
+<<<<<<< HEAD
 
             merged_data = st.session_state.get(
                 'merged_data',
@@ -539,6 +594,19 @@ def main():
                         )
                     }
                 )
+=======
+            merged_data = st.session_state.get('merged_data', pd.DataFrame())
+            cols_for_em = ['Student ID', 'Student', 'EM', 'Phone Number']
+            existing = [c for c in cols_for_em if c in merged_data.columns]
+            if merged_data is None or merged_data.empty or not existing:
+                st.info("No student/EM data available.")
+            else:
+                em_data = merged_data[existing].drop_duplicates()
+                if 'Student' in em_data.columns:
+                    st.dataframe(em_data.sort_values(by="Student"), use_container_width=True)
+                else:
+                    st.dataframe(em_data, use_container_width=True)
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
 
         with tab4:
             st.subheader("📋 Salary Calculaion")
@@ -580,6 +648,7 @@ def main():
                 sheet_id,
                 load_credentials
             )
+<<<<<<< HEAD
         
 
         with tab6:
@@ -722,9 +791,15 @@ def main():
 
                             mime="text/csv"
                         )
+=======
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
 
 
 if __name__ == "__main__":
     main()
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4

@@ -463,4 +463,8 @@ def render_exam_tab(
 
             st.success("✅ Updated successfully")
 
+<<<<<<< HEAD
             st.rerun()
+=======
+            st.rerun()
+>>>>>>> af0ae07c1d6c831d966f15923d396e60fffc5fd4
