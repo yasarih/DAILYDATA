@@ -53,39 +53,129 @@ def fetch_data(sheet_id, worksheet):
         return pd.DataFrame()
 
 @st.cache_data(show_spinner=True, ttl=3600)  # ⬅️ 1 hour cache
+@st.cache_data(show_spinner=True, ttl=3600)
 def merge_teacher_student(main_df, student_df):
-    if main_df is None or student_df is None or main_df.empty or student_df.empty:
+
+    if main_df is None or student_df is None:
         return pd.DataFrame()
-    
-    # rename if present (case sensitive in sheet); handle both possibilities
+
+    if main_df.empty or student_df.empty:
+        return main_df
+
     main_df = main_df.copy()
     student_df = student_df.copy()
 
+    # -------------------------
+    # CLEAN COLUMN NAMES
+    # -------------------------
+    main_df.columns = (
+        main_df.columns
+        .astype(str)
+        .str.strip()
+    )
+
+    student_df.columns = (
+        student_df.columns
+        .astype(str)
+        .str.strip()
+    )
+
+    # -------------------------
+    # FIX STUDENT ID COLUMN
+    # -------------------------
     if 'Student id' in main_df.columns and 'Student ID' not in main_df.columns:
-        main_df = main_df.rename(columns={'Student id': 'Student ID'})
+        main_df.rename(
+            columns={'Student id': 'Student ID'},
+            inplace=True
+        )
+
     if 'Student id' in student_df.columns and 'Student ID' not in student_df.columns:
-        student_df = student_df.rename(columns={'Student id': 'Student ID'})
+        student_df.rename(
+            columns={'Student id': 'Student ID'},
+            inplace=True
+        )
 
-    # ensure student_df has at least Student ID column
     if 'Student ID' not in student_df.columns:
-        return main_df  # can't merge - return original
+        st.error("Student ID column missing in Student Data sheet")
+        return main_df
 
-    # make sure columns exist before merging
+    # -------------------------
+    # MERGE COLUMNS
+    # -------------------------
     merge_cols = ['Student ID']
+
+    # EM
     if 'EM' in student_df.columns:
         merge_cols.append('EM')
-    if 'EM Phone' in student_df.columns and 'Phone Number' not in student_df.columns:
-        student_df = student_df.rename(columns={'EM Phone': 'Phone Number'})
+
+    # PHONE
+    if 'EM Phone' in student_df.columns:
+        student_df.rename(
+            columns={'EM Phone': 'Phone Number'},
+            inplace=True
+        )
+
     if 'Phone Number' in student_df.columns:
         merge_cols.append('Phone Number')
 
-    try:
-        merged = main_df.merge(student_df[merge_cols], on='Student ID', how='left')
-        return merged
-    except Exception as e:
-        st.error(f"Error during merging: {e}")
-        return main_df
+    # -------------------------
+    # FIND LINK COLUMN
+    # -------------------------
+    link_col = next(
 
+        (
+            c for c in student_df.columns
+
+            if 'link' in c.lower()
+        ),
+
+        None
+    )
+
+    # DEBUG
+    st.write("Detected Link Column:", link_col)
+
+    # -------------------------
+    # STANDARDIZE LINK COLUMN
+    # -------------------------
+    if link_col:
+
+        if link_col != 'Link':
+
+            student_df.rename(
+                columns={link_col: 'Link'},
+                inplace=True
+            )
+
+        merge_cols.append('Link')
+
+    # REMOVE DUPLICATES
+    merge_cols = list(dict.fromkeys(merge_cols))
+
+    # DEBUG
+    st.write("Merge Columns:", merge_cols)
+
+    # -------------------------
+    # MERGE
+    # -------------------------
+    try:
+
+        merged = main_df.merge(
+
+            student_df[merge_cols],
+
+            on='Student ID',
+
+            how='left'
+        )
+
+        return merged
+
+    except Exception as e:
+
+        st.error(f"Error during merging: {e}")
+
+        return main_df
 def highlight_duplicates(df):
     # Accepts a DataFrame and returns a Styler highlighting duplicates on Date+Student ID
     if df is None or df.empty:
@@ -235,7 +325,7 @@ def main():
     profile_df = fetch_data(sheet_id, "Profile")
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
     demoBonus_df = fetch_data(sheet_id, "DemoBonus")
-    
+    timetable_df = fetch_data(sheet_id, "TimeTable")
     examlist_df = fetch_data(sheet_id2, "ExamList")
 
     st.subheader("🔐 Login")
@@ -333,7 +423,7 @@ def main():
         else:
             st.info("No class quality data found for your profile.")
 
-        tab5, tab1, tab2, tab3, tab4 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion"  ])
+        tab5, tab1, tab2, tab3, tab4,tab6 = st.tabs(["📋 Exam Details","👩‍🏫 Profile", "📖 Daily Class Data", "👥 Student Details","📋 Salary Calculaion","🕒 Timetable"  ])
 
         with tab1:
             st.subheader("👩‍🏫 Teacher Profile")
@@ -404,19 +494,145 @@ def main():
                     st.info("No 'Hr' column found to compute consolidated hours.")
 
         with tab3:
-            st.subheader("👥 Assigned Students & EM Info")
-            merged_data = st.session_state.get('merged_data', pd.DataFrame())
-            cols_for_em = ['Student ID', 'Student', 'EM', 'Phone Number']
-            existing = [c for c in cols_for_em if c in merged_data.columns]
-            if merged_data is None or merged_data.empty or not existing:
-                st.info("No student/EM data available.")
-            else:
-                em_data = merged_data[existing].drop_duplicates()
-                if 'Student' in em_data.columns:
-                    st.dataframe(em_data.sort_values(by="Student"), use_container_width=True)
-                else:
-                    st.dataframe(em_data, use_container_width=True)
 
+                st.subheader("👥 Assigned Students & EM Info")
+
+                merged_data = st.session_state.get(
+                    'merged_data',
+                    pd.DataFrame()
+                )
+
+                # -------------------------
+                # REQUIRED COLUMNS
+                # -------------------------
+                cols_for_em = [
+                    'Student ID',
+                    'Student',
+                    'EM',
+                    'Phone Number',
+                    'Link'
+                ]
+
+                existing = [
+                    c for c in cols_for_em
+                    if c in merged_data.columns
+                ]
+
+                # -------------------------
+                # NO DATA
+                # -------------------------
+                if merged_data is None or merged_data.empty or not existing:
+
+                    st.info("No student/EM data available.")
+
+                else:
+
+                    # -------------------------
+                    # PREPARE DATA
+                    # -------------------------
+                    em_data = (
+                        merged_data[existing]
+                        .drop_duplicates()
+                        .copy()
+                    )
+
+                    # -------------------------
+                    # SORT
+                    # -------------------------
+                    if 'Student' in em_data.columns:
+
+                        em_data = em_data.sort_values(
+                            by="Student"
+                        )
+
+                    # -------------------------
+                    # CLEAN LINK COLUMN
+                    # -------------------------
+                    if 'Link' in em_data.columns:
+
+                        em_data['Link'] = (
+                            em_data['Link']
+                            .astype(str)
+                            .str.strip()
+                        )
+
+                        # remove invalid values
+                        em_data['Link'] = em_data['Link'].replace(
+                            ["", "nan", "None"],
+                            pd.NA
+                        )
+
+                        # add https:// if missing
+                        em_data['Link'] = em_data['Link'].apply(
+
+                            lambda x:
+
+                            (
+                                "https://" + x
+                                if pd.notna(x)
+                                and not str(x).startswith(
+                                    (
+                                        "http://",
+                                        "https://"
+                                    )
+                                )
+                                else x
+                            )
+                        )
+
+                    # -------------------------
+                    # DISPLAY TABLE
+                    # -------------------------
+                    st.dataframe(
+
+                        em_data,
+
+                        use_container_width=True,
+
+                        hide_index=True,
+
+                        column_config={
+
+                            "Student ID": st.column_config.TextColumn(
+                                "Student ID"
+                            ),
+
+                            "Student": st.column_config.TextColumn(
+                                "Student Name"
+                            ),
+
+                            "EM": st.column_config.TextColumn(
+                                "EM"
+                            ),
+
+                            "Phone Number": st.column_config.TextColumn(
+                                "Phone Number"
+                            ),
+
+                            "Link": st.column_config.LinkColumn(
+
+                                label="Class Link",
+
+                                help="Open Student Link",
+
+                                display_text="Open Link"
+                            )
+                        }
+                    )
+
+                    # -------------------------
+                    # DOWNLOAD BUTTON
+                    # -------------------------
+                    st.download_button(
+
+                        "📥 Download Student List",
+
+                        data=em_data.to_csv(index=False).encode("utf-8"),
+
+                        file_name="student_details.csv",
+
+                        mime="text/csv"
+                    )
         with tab4:
             st.subheader("📋 Salary Calculaion")
             # use teacher_id_norm computed above
@@ -459,6 +675,163 @@ def main():
             )
 
 
+        with tab6:
+
+            st.subheader("📅 My Time Table")
+
+            # Load timetable sheet
+            timetable_df = fetch_data(sheet_id, "TimeTable")
+
+            if timetable_df is None or timetable_df.empty:
+
+                st.info("No timetable data found.")
+
+            else:
+
+                # -------------------------
+                # CLEAN COLUMN NAMES
+                # -------------------------
+                timetable_df.columns = (
+                    timetable_df.columns
+                    .astype(str)
+                    .str.strip()
+                )
+
+                # -------------------------
+                # FIND TEACHER ID COLUMN
+                # -------------------------
+                teacher_col = next(
+
+                    (
+                        c for c in timetable_df.columns
+                        if str(c).strip().lower() == "teacher_id"
+                    ),
+
+                    None
+                )
+
+                if teacher_col is None:
+
+                    st.error("teacher_id column not found in Timetable sheet.")
+
+                else:
+
+                    # -------------------------
+                    # NORMALIZE IDS
+                    # -------------------------
+                    timetable_df[teacher_col] = (
+
+                        timetable_df[teacher_col]
+                        .astype(str)
+                        .str.strip()
+                        .str.lower()
+                    )
+
+                    current_teacher = (
+                        teacher_id_norm
+                        .strip()
+                        .lower()
+                    )
+
+                    # -------------------------
+                    # FILTER CURRENT TEACHER
+                    # -------------------------
+                    teacher_tt = timetable_df[
+
+                        timetable_df[teacher_col]
+                        == current_teacher
+
+                    ].copy()
+
+                    if teacher_tt.empty:
+
+                        st.info("No timetable assigned.")
+
+                    else:
+
+                        # -------------------------
+                        # SORT
+                        # -------------------------
+                        if "Day" in teacher_tt.columns:
+
+                            day_order = {
+
+                                "Monday": 1,
+                                "Tuesday": 2,
+                                "Wednesday": 3,
+                                "Thursday": 4,
+                                "Friday": 5,
+                                "Saturday": 6,
+                                "Sunday": 7
+                            }
+
+                            teacher_tt["day_order"] = (
+                                teacher_tt["Day"]
+                                .map(day_order)
+                            )
+
+                            teacher_tt = teacher_tt.sort_values(
+
+                                by=[
+                                    "day_order",
+                                    "Time 1"
+                                ]
+                            )
+
+                        # -------------------------
+                        # DISPLAY COLUMNS
+                        # -------------------------
+                        show_cols = [
+
+                            "Student ID",
+                            "Student Name",
+                            "Subject",
+                            "Day",
+                            "Time 1",
+                            "Time 2"
+                        ]
+
+                        existing_cols = [
+
+                            c for c in show_cols
+                            if c in teacher_tt.columns
+                        ]
+                        for col in ["Time 1", "Time 2"]:
+
+                            if col in teacher_tt.columns:
+
+                                teacher_tt[col] = pd.to_datetime(
+
+                                    teacher_tt[col].astype(str),
+
+                                    errors="coerce"
+
+                                ).dt.strftime("%I:%M %p")
+
+                        st.dataframe(
+
+                            teacher_tt[existing_cols],
+
+                            use_container_width=True,
+
+                            hide_index=True
+                        )
+
+                        # -------------------------
+                        # DOWNLOAD
+                        # -------------------------
+                        st.download_button(
+
+                            "📥 Download Timetable",
+
+                            data=teacher_tt[existing_cols]
+                            .to_csv(index=False)
+                            .encode("utf-8"),
+
+                            file_name="my_timetable.csv",
+
+                            mime="text/csv"
+                )
 if __name__ == "__main__":
     main()
 
