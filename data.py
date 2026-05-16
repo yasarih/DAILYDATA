@@ -326,7 +326,7 @@ def main():
     supa_demofit_df = fetch_data(sheet_id, "ForSupalearnID")
     demoBonus_df = fetch_data(sheet_id, "DemoBonus")
     timetable_df = fetch_data(sheet_id, "TimeTable")
-    examlist_df = fetch_data(sheet_id2, "ExamList")
+   
 
     st.subheader("🔐 Login")
     input_teacher_id = st.text_input("Enter Your Teacher ID").strip().lower()
